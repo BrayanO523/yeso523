@@ -1,0 +1,82 @@
+
+        // Web Catalog Functions
+        function renderCatalogKits() {
+            const container = document.getElementById('catalog-kits-list');
+            if (!container) return;
+
+            const recipes = state.recipes || {};
+            if (Object.keys(recipes).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 60px;">No hay kits creados. Ve a "Mis Kits" para crear uno.</p>';
+                return;
+            }
+
+            // Initialize catalogData if it doesn't exist
+            state.catalogData = state.catalogData || {};
+
+            container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
+                const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
+                const defaultItems = Object.entries(recipe)
+                    .filter(([k]) => k !== 'price')
+                    .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
+                    .join(', ');
+
+                return `
+                    <div class="tile" style="margin-bottom: 30px;">
+                        <h3 style="margin-bottom: 20px; color: var(--highlight);">${kitName}</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <div class="form-group">
+                                    <label>URL de Imagen</label>
+                                    <input type="text" 
+                                           id="catalog-img-${kitName.replace(/\s+/g, '_')}" 
+                                           value="${catalogInfo.image || ''}" 
+                                           placeholder="https://ejemplo.com/imagen.jpg"
+                                           style="padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; width: 100%;">
+                                </div>
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>Descripción para Clientes</label>
+                                    <textarea 
+                                        id="catalog-desc-${kitName.replace(/\s+/g, '_')}" 
+                                        rows="4" 
+                                        placeholder="Describe el kit para tus clientes..."
+                                        style="padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; width: 100%; resize: vertical;">${catalogInfo.description || ''}</textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="form-group">
+                                    <label>Lo que Incluye (uno por línea)</label>
+                                    <textarea 
+                                        id="catalog-items-${kitName.replace(/\s+/g, '_')}" 
+                                        rows="8" 
+                                        placeholder="${defaultItems}"
+                                        style="padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; width: 100%; resize: vertical;">${(catalogInfo.customItems || []).join('\n')}</textarea>
+                                    <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Si está vacío, se mostrará la lista automática</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="saveCatalogKit('${kitName}')" class="primary-btn" style="margin-top: 15px;">
+                            <i class="fa-solid fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function saveCatalogKit(kitName) {
+            const safeKitName = kitName.replace(/\s+/g, '_');
+            const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
+            const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
+            const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
+            const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
+
+            state.catalogData = state.catalogData || {};
+            state.catalogData[kitName] = { image, description, customItems };
+
+            try {
+                await saveState();
+                alert(`✅ Cambios guardados para "${kitName}"`);
+            } catch (e) {
+                console.error(e);
+                alert('Error al guardar cambios');
+            }
+        }

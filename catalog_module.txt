@@ -1,0 +1,10 @@
+
+                <!-- Web Catalog Module (NEW) -->
+                <div id="catalog-module" class="admin-module">
+                    <h2 class="slide-title">Catálogo Web - Editar Presentación para Clientes</h2>
+                    <p style="color: #64748b; margin-bottom: 30px;">Personaliza cómo se ven tus kits en la tienda online (ventas.html)</p>
+                    
+                    <div id="catalog-kits-list">
+                        <!-- Dynamic content will be rendered here -->
+                    </div>
+                </div>

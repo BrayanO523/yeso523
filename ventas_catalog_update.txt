@@ -1,0 +1,74 @@
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            const recipes = state.recipes || {};
+            const catalogData = state.catalogData || {};
+            const count = Object.keys(recipes).length;
+            document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
+
+            if (count === 0) {
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
+                return;
+            }
+
+            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
+                const available = checkAvailability(recipe);
+                const catalog = catalogData[name] || {};
+                
+                const description = catalog.description || Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
+                
+                const hasCustomImage = catalog.image && catalog.image.trim();
+                const imageStyle = hasCustomImage ? `background-image: url('${catalog.image}'); background-size: cover; background-position: center;` : '';
+                
+                return `
+                    <div class="product-card" onclick="openProductModal('${name}')">
+                        <div class="product-image" style="${imageStyle}">
+                            ${!hasCustomImage ? '<i class="fa-solid fa-box-open"></i>' : ''}
+                            <div class="availability-badge ${!available ? 'out-of-stock' : ''}">${available ? 'Disponible' : 'Agotado'}</div>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">${name}</div>
+                            <div class="product-description">${description}</div>
+                            <div class="price">$ ${recipe.price}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openProductModal(kitName) {
+            currentProduct = kitName;
+            const recipe = state.recipes[kitName];
+            if (!recipe) return;
+
+            const available = checkAvailability(recipe);
+            const catalog = (state.catalogData || {})[kitName] || {};
+            
+            let itemsList;
+            if (catalog.customItems && catalog.customItems.length > 0) {
+                itemsList = catalog.customItems.join('<br>• ');
+            } else {
+                itemsList = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join('<br>• ');
+            }
+
+            const modalImage = document.getElementById('modal-image');
+            if (catalog.image && catalog.image.trim()) {
+                modalImage.style.backgroundImage = `url('${catalog.image}')`;
+                modalImage.style.backgroundSize = 'cover';
+                modalImage.style.backgroundPosition = 'center';
+                modalImage.innerHTML = '';
+            } else {
+                modalImage.style.backgroundImage = '';
+                modalImage.innerHTML = '<i class="fa-solid fa-box-open"></i>';
+            }
+
+            document.getElementById('modal-title').innerText = kitName;
+            document.getElementById('modal-price').innerText = `$ ${recipe.price}`;
+            document.getElementById('modal-description').innerHTML = `<strong>Incluye:</strong><br>• ${itemsList}`;
+            document.getElementById('modal-stock-info').innerText = available ? '(Disponible)' : '(Sin stock)';
+            document.getElementById('modal-add-cart').disabled = !available;
+            document.getElementById('modal-buy-now').disabled = !available;
+            modalQty = 1;
+            document.getElementById('modal-qty').innerText = modalQty;
+            document.getElementById('product-modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        }
