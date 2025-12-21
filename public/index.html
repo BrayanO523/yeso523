@@ -1837,21 +1837,29 @@
             }
 
             container.innerHTML = pending.map((order, index) => {
-                const total = order.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-                const itemsList = order.cart.map(i => `<li>${i.qty}x ${i.name}</li>`).join('');
+                const total = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const itemsList = order.items.map(i => `<li>${i.quantity}x ${i.name}</li>`).join('');
+
+                const cleanPhone = order.phone.replace(/\D/g, '');
+                const waUrl = `https://wa.me/504${cleanPhone}?text=Hola ${encodeURIComponent(order.customer)}, te escribo de Kits de Yeso sobre tu pedido pendiente.`;
 
                 return `
                     <div class="tile">
                         <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <span style="font-weight:700; color:#475569;">${order.customer.name}</span>
-                            <span style="font-size:12px; color:#64748b;">${new Date(order.date).toLocaleDateString()}</span>
+                            <span style="font-weight:700; color:#475569;">${order.customer}</span>
+                            <span style="font-size:12px; color:#64748b;">${new Date(order.timestamp).toLocaleDateString()}</span>
                         </div>
-                        <p style="font-size:13px; color:#64748b; margin-bottom:5px;">${order.customer.phone} | ${order.deliveryType}</p>
+                        <p style="font-size:13px; color:#64748b; margin-bottom:5px;">${order.phone}</p>
                         <ul style="font-size:13px; margin-bottom:15px; padding-left:20px; color:#334155;">
                             ${itemsList}
                         </ul>
                         <div style="font-weight:700; font-size:18px; color:var(--highlight); margin-bottom:15px; text-align:right;">
                             L ${total.toFixed(2)}
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom: 10px;">
+                           <a href="${waUrl}" target="_blank" class="primary-btn" style="background:#25D366; padding:10px; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:5px; grid-column: span 2;">
+                                <i class="fa-brands fa-whatsapp"></i> Contactar al Cliente
+                            </a>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                             <button class="primary-btn" style="background:#ef4444; padding:10px;" onclick="rejectOrder(${index})">Rechazar</button>
@@ -1866,15 +1874,15 @@
             if (!confirm("¿Confirmar este pedido? Se registrará como venta.")) return;
 
             const order = state.pendingOrders[index];
-            const total = order.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const total = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
             state.sales.push({
                 date: new Date().toISOString().split('T')[0], // YYYY-MM-DD for sorting
-                type: "Pedido Web - " + order.customer.name,
+                type: "Pedido Web - " + order.customer,
                 price: parseFloat(total.toFixed(2)),
                 quantity: 1,
                 profit: parseFloat((total * 0.5).toFixed(2)),
-                items: order.cart
+                items: order.items
             });
 
             state.totalProfit += (total * 0.5);
@@ -1891,12 +1899,12 @@
             const order = state.pendingOrders[index];
 
             // Return Stock
-            order.cart.forEach(item => {
-                if (state.recipes[item.kitName]) {
-                    const recipe = state.recipes[item.kitName];
+            order.items.forEach(item => {
+                if (state.recipes[item.name]) {
+                    const recipe = state.recipes[item.name];
                     for (const [ing, qty] of Object.entries(recipe)) {
                         if (ing === 'price') continue;
-                        state.stock[ing] = (state.stock[ing] || 0) + (qty * item.qty);
+                        state.stock[ing] = (state.stock[ing] || 0) + (qty * item.quantity);
                     }
                 }
             });
@@ -3145,7 +3153,12 @@
             // Auto-hide sidebar on mobile after selection
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('mobileOver');
+                const icon = document.getElementById('sidebarToggle').querySelector('i');
+
                 if (sidebar) sidebar.classList.remove('active');
+                if (overlay) overlay.classList.remove('active');
+                if (icon) icon.className = 'fa-solid fa-bars';
             }
         }
 
