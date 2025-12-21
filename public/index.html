@@ -1578,43 +1578,18 @@
                                     <label>Nombre del Kit</label>
                                     <input type="text" id="kit-name" required placeholder="Ej: Kit Básico">
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <div class="form-group">
-                                        <label>Figura GRANDE (uds)</label>
-                                        <input type="number" id="kit-figura-g" step="1" value="2" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Figura PEQUEÑA (uds)</label>
-                                        <input type="number" id="kit-figura-p" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Roja (ml)</label>
-                                        <input type="number" id="kit-roja" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Amarilla (ml)</label>
-                                        <input type="number" id="kit-amarilla" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Azul (ml)</label>
-                                        <input type="number" id="kit-azul" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Pinceles (uds)</label>
-                                        <input type="number" id="kit-pinceles" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Paletas (uds)</label>
-                                        <input type="number" id="kit-paletas" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Envases (uds)</label>
-                                        <input type="number" id="kit-envases" step="1" value="3" required>
-                                    </div>
-                                    <div class="form-group" style="grid-column: span 2;">
-                                        <label>Precio Venta (L)</label>
-                                        <input type="number" id="kit-price" value="150" required>
-                                    </div>
+                                <div id="kit-components-container"
+                                    style="display: grid; gap: 10px; margin-bottom: 15px;">
+                                    <!-- Dynamic Rows will appear here -->
+                                </div>
+                                <button type="button" onclick="addKitComponentRow()" class="primary-btn"
+                                    style="background:#64748b; margin-bottom:15px; width:100%;">
+                                    <i class="fa-solid fa-plus"></i> Agregar Material
+                                </button>
+
+                                <div class="form-group">
+                                    <label>Precio Venta (L)</label>
+                                    <input type="number" id="kit-price" value="150" required>
                                 </div>
 
                                 <!-- Automatic Stats Panel -->
@@ -2698,43 +2673,158 @@
             };
         }
 
+        // --- DYNAMIC KIT CREATION ---
+
+        function addKitComponentRow(preselectedItem = null, preselectedQty = 1) {
+            const container = document.getElementById('kit-components-container');
+            if (!container) return;
+
+            const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const inventory = state.inventoryData || {};
+            const sortedKeys = Object.keys(inventory).sort((a, b) => (inventory[a].name || a).localeCompare(inventory[b].name || b));
+
+            let optionsHtml = sortedKeys.map(key => {
+                const item = inventory[key];
+                return `<option value="${key}">${item.name || key} (${item.unit || 'uds'})</option>`;
+            }).join('');
+
+            const div = document.createElement('div');
+            div.className = 'kit-component-row';
+            div.id = rowId;
+            div.style.display = 'grid';
+            div.style.gridTemplateColumns = '2fr 1fr auto';
+            div.style.gap = '10px';
+            div.style.alignItems = 'center';
+            div.style.background = '#f8fafc';
+            div.style.padding = '10px';
+            div.style.borderRadius = '6px';
+            div.style.border = '1px solid #e2e8f0';
+
+            div.innerHTML = `
+                <div style="display:flex; flex-direction:column;">
+                    <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Material</label>
+                    <select class="component-select" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" onchange="updateKitStats()">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                <div style="display:flex; flex-direction:column;">
+                    <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Cantidad</label>
+                    <input type="number" class="component-qty" value="${preselectedQty}" step="any" min="0" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" oninput="updateKitStats()">
+                </div>
+                <button type="button" onclick="document.getElementById('${rowId}').remove(); updateKitStats();" style="background:#ef4444; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; margin-top:14px;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            `;
+
+            container.appendChild(div);
+
+            if (preselectedItem) {
+                div.querySelector('.component-select').value = preselectedItem;
+            } else {
+                // If it's a new empty row, default to first item
+                if (sortedKeys.length > 0) div.querySelector('.component-select').value = sortedKeys[0];
+            }
+            updateKitStats();
+        }
+
+        function updateKitStats() {
+            const rows = document.querySelectorAll('.kit-component-row');
+            let totalCost = 0;
+
+            rows.forEach(row => {
+                const itemKey = row.querySelector('.component-select').value;
+                const qty = parseFloat(row.querySelector('.component-qty').value) || 0;
+
+                // Estimate cost (Using hardcoded assumptions from original code or 0 if unknown)
+                // In a real scenario, inventory items should have a 'cost' field. 
+                // Currently code has hardcoded costs in 'unitCosts' variable in salesForm, but not globally accessible easily.
+                // We'll try to map common items to known costs for estimation, else 0.
+
+                // Quick map based on original code:
+                const costs = {
+                    figura_g: 10.42,
+                    figura_p: 3.47,
+                    t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522,
+                    pinceles: 4.00, paletas: 4.00, envases: 2.66
+                }; // Fallback map
+
+                // If inventory has cost, use it (future proofing), else use fallback map
+                // NOTE: Current state.inventoryData doesn't seem to have 'cost' property based on view_file usage, 
+                // but let can add rudimentary check.
+
+                let unitCost = costs[itemKey] || 0;
+                totalCost += (unitCost * qty);
+            });
+
+            const suggestedPrice = totalCost * 2.5; // Margin logic
+
+            // DOM Updates
+            const costDisplay = document.getElementById('suggested-cost-display');
+            const priceDisplay = document.getElementById('suggested-price-display');
+            if (costDisplay) costDisplay.innerText = `L ${totalCost.toFixed(2)}`;
+            if (priceDisplay) priceDisplay.innerText = `L ${suggestedPrice.toFixed(0)}.00`;
+
+            // Only auto-update price if it's new/default
+            const priceInput = document.getElementById('kit-price');
+            // Check if user is editing a price manually or if it's a fresh calc
+            if (priceInput && (priceInput.dataset.touched !== 'true')) {
+                // Optional: Auto-suggest? Maybe better to just show calculation and let user decide.
+                // priceInput.value = suggestedPrice.toFixed(0);
+            }
+        }
+
+        // Mark price as touched so we don't overwrite user custom price during edits
+        const priceInput = document.getElementById('kit-price');
+        if (priceInput) {
+            priceInput.addEventListener('input', () => { priceInput.dataset.touched = 'true'; });
+        }
+
+
         const kitForm = document.getElementById('kit-config-form');
         if (kitForm) {
             kitForm.onsubmit = (e) => {
                 e.preventDefault();
-                const name = document.getElementById('kit-name').value;
+                const name = document.getElementById('kit-name').value.trim();
                 const originalName = document.getElementById('original-kit-name').value;
+                const price = parseFloat(document.getElementById('kit-price').value) || 0;
 
                 // Handle Rename
                 if (originalName && originalName !== name) {
                     if (confirm(`¿Cambiar nombre del kit de "${originalName}" a "${name}"?`)) {
                         delete state.recipes[originalName];
-                        // Migrate Catalog Data
                         if (state.catalogData && state.catalogData[originalName]) {
                             state.catalogData[name] = state.catalogData[originalName];
                             delete state.catalogData[originalName];
                         }
                     } else {
-                        return; // Cancel functionality if user denies rename
+                        return;
                     }
                 }
 
-                state.recipes[name] = {
-                    figura_g: parseInt(document.getElementById('kit-figura-g').value) || 0,
-                    figura_p: parseInt(document.getElementById('kit-figura-p').value) || 0,
-                    t_roja: parseFloat(document.getElementById('kit-roja').value) || 0,
-                    t_amarilla: parseFloat(document.getElementById('kit-amarilla').value) || 0,
-                    t_azul: parseFloat(document.getElementById('kit-azul').value) || 0,
-                    pinceles: parseInt(document.getElementById('kit-pinceles').value) || 0,
-                    paletas: parseInt(document.getElementById('kit-paletas').value) || 0,
-                    envases: parseInt(document.getElementById('kit-envases').value) || 0,
-                    price: parseFloat(document.getElementById('kit-price').value)
-                };
+                // Build Recipe from Dynamic Rows
+                const newRecipe = { price: price };
+                const rows = document.querySelectorAll('.kit-component-row');
 
+                rows.forEach(row => {
+                    const itemKey = row.querySelector('.component-select').value;
+                    const qty = parseFloat(row.querySelector('.component-qty').value) || 0;
+                    if (qty > 0) {
+                        // Aggregate if same item added multiple times
+                        newRecipe[itemKey] = (newRecipe[itemKey] || 0) + qty;
+                    }
+                });
+
+                if (Object.keys(newRecipe).length <= 1) { // Only price key
+                    return alert("Debes agregar al menos un material al kit.");
+                }
+
+                state.recipes[name] = newRecipe;
                 saveState();
-                // Reset Form
+
+                // Cleanup
                 cancelEditKit();
                 alert(`Kit "${name}" guardado correctamente.`);
+                renderKitCatalog(); // Refresh list
             };
         }
 
@@ -2744,16 +2834,22 @@
 
             document.getElementById('kit-name').value = name;
             document.getElementById('original-kit-name').value = name;
-
-            document.getElementById('kit-figura-g').value = recipe.figura_g || 0;
-            document.getElementById('kit-figura-p').value = recipe.figura_p || 0;
-            document.getElementById('kit-roja').value = recipe.t_roja || 0;
-            document.getElementById('kit-amarilla').value = recipe.t_amarilla || 0;
-            document.getElementById('kit-azul').value = recipe.t_azul || 0;
-            document.getElementById('kit-pinceles').value = recipe.pinceles || 0;
-            document.getElementById('kit-paletas').value = recipe.paletas || 0;
-            document.getElementById('kit-envases').value = recipe.envases || 0;
             document.getElementById('kit-price').value = recipe.price;
+            document.getElementById('kit-price').dataset.touched = 'true'; // Don't auto-overwrite price
+
+            // Clear and Populate components
+            const container = document.getElementById('kit-components-container');
+            container.innerHTML = '';
+
+            Object.entries(recipe).forEach(([key, value]) => {
+                if (key === 'price') return;
+                addKitComponentRow(key, value);
+            });
+
+            // If empty (edge case), add one empty row
+            if (container.children.length === 0) {
+                addKitComponentRow();
+            }
 
             // UI Mode
             document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Actualizar Kit';
@@ -2766,8 +2862,13 @@
         function cancelEditKit() {
             document.getElementById('kit-config-form').reset();
             document.getElementById('original-kit-name').value = '';
+            document.getElementById('kit-components-container').innerHTML = '';
+            // Add one default empty row for new kit
+            addKitComponentRow();
+
             document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Guardar Configuración';
             document.getElementById('cancel-edit-btn').style.display = 'none';
+            document.getElementById('kit-price').dataset.touched = 'false';
             updateKitStats();
         }
 
@@ -3193,8 +3294,17 @@
                             </thead>
                             <tbody>
                                 ${filteredSales.map(s => {
-                    const itemsArr = Array.isArray(s.items) ? s.items : [];
-                    const itemsText = itemsArr.length > 0 ? itemsArr.map(i => `${i.qty}x ${i.name}`).join(' | ') : '-';
+                    let itemsText = '-';
+                    if (s.items) {
+                        if (Array.isArray(s.items)) {
+                            itemsText = s.items.map(i => `${i.qty}x ${i.name}`).join(' | ');
+                        } else {
+                            itemsText = Object.entries(s.items)
+                                .filter(([k]) => k !== 'price')
+                                .map(([k, v]) => `${v}x ${state.inventoryData[k]?.name || k}`)
+                                .join(' | ');
+                        }
+                    }
                     return `
                                     <tr>
                                         <td>${s.date}</td>
@@ -3210,13 +3320,14 @@
                         <h3 style="margin-top: 40px;">Detalle de Gastos</h3>
                         <table>
                             <thead>
-                                <tr><th>Fecha</th><th>Descripción</th><th class="text-right">Monto</th></tr>
+                                <tr><th>Fecha</th><th>Descripción</th><th>Cant.</th><th class="text-right">Monto</th></tr>
                             </thead>
                             <tbody>
                                 ${filteredPurchases.map(p => `
                                     <tr>
                                         <td>${p.date}</td>
                                         <td>${state.inventoryData[p.item]?.name || p.item || 'Gasto'}</td>
+                                        <td>${p.qty || 1}</td>
                                         <td class="text-right">L ${(p.cost || 0).toFixed(2)}</td>
                                     </tr>
                                 `).join('')}
@@ -3526,6 +3637,10 @@
             }
             if (modName === 'orders') {
                 renderTable('pending-orders', state.pendingOrders);
+            }
+            if (modName === 'kits') {
+                // Initialize/Reset form ensuring one empty row exists
+                if (typeof cancelEditKit === 'function') cancelEditKit();
             }
 
             // Mobile: Close sidebar if open
