@@ -1064,82 +1064,106 @@
             return getMaxStock(recipe) > 0;
         }
 
+        let currentCategory = 'all';
+
+        function filterProducts(category) {
+            currentCategory = category;
+
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.innerText === category || (category === 'all' && btn.innerText === 'Todos') || btn.getAttribute('onclick').includes(`'${category}'`)) {
+                    btn.style.background = '#3b82f6';
+                    btn.style.color = 'white';
+                    btn.style.borderColor = '#3b82f6';
+                } else {
+                    btn.style.background = 'white';
+                    btn.style.color = '#64748b';
+                    btn.style.borderColor = '#e2e8f0';
+                }
+            });
+
+            renderProducts();
+        }
+
         function renderProducts() {
             const grid = document.getElementById('products-grid');
-
-            const recipes = state.recipes || {}
-
-                ;
-
-            const catalog = state.catalogData || {}
-
-                ;
-
+            const recipes = state.recipes || {};
+            const catalog = state.catalogData || {};
             const count = Object.keys(recipes).length;
 
-            document.getElementById('results-count').innerText = `$ {
-                count
-            }
-
-            resultado$ {
-                count !==1 ? 's': ''
-            }
-
-            `;
+            document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
 
             if (count === 0) {
                 grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
                 return;
             }
 
-            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
-                const available = checkAvailability(recipe);
+            // Group by Category
+            const grouped = {
+                'Kits': [],
+                'Figuras Grandes': [],
+                'Figuras Medianas': [],
+                'Figuras Pequeñas': [],
+                'Otros': []
+            };
 
-                const info = catalog[name] || {}
+            Object.entries(recipes).forEach(([name, recipe]) => {
+                const info = catalog[name] || {};
+                const cat = info.category || 'Otros';
+                if (grouped[cat]) grouped[cat].push({ name, recipe, info });
+                else grouped['Otros'].push({ name, recipe, info }); // Fallback
+            });
 
-                    ;
+            let html = '';
 
-                // Use custom description or fallback to auto-generated
-                const autoDesc = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `$ {
-                            v
-                        }
+            // Categories to show
+            const categoriesToShow = currentCategory === 'all'
+                ? ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas', 'Otros']
+                : [currentCategory];
 
-                        $ {
-                            state.inventoryData?.[k]?.name || k
-                        }
+            categoriesToShow.forEach(cat => {
+                const products = grouped[cat];
+                if (products.length === 0) return;
 
-                        `).join(' • ');
-                const displayDesc = info.description || autoDesc;
+                html += `
+                    <div class="category-section" style="grid-column: 1/-1; margin-top: 20px; margin-bottom: 10px;">
+                        <h3 style="font-size: 20px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">${cat}</h3>
+                    </div>
+                `;
 
-                // Image handling
-                let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
+                products.forEach(({ name, recipe, info }) => {
+                    const available = checkAvailability(recipe);
 
-                if (info.image && info.image.startsWith('http')) {
-                    imgHtml = `<div class="product-image" style="background-image: url('${info.image}'); background-size: cover; background-position: center;" >`;
-                }
+                    // Use custom description or fallback to auto-generated
+                    const autoDesc = Object.entries(recipe)
+                        .filter(([k]) => k !== 'price')
+                        .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
+                        .join(' • ');
+                    const displayDesc = info.description || autoDesc;
 
-                return ` <div class="product-card" onclick="openProductModal('${name}')" > $ {
-                        imgHtml
+                    // Image handling
+                    let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
+                    if (info.image && info.image.startsWith('http')) {
+                        imgHtml = `<div class="product-image" style="background-image: url('${info.image}'); background-size: cover; background-position: center;">`;
                     }
 
-                    <div class="availability-badge ${!available ? 'out-of-stock' : ''}" >$ {
-                        available ? 'Disponible' : 'Agotado'
-                    }
+                    html += `
+                        <div class="product-card" onclick="openProductModal('${name}')">
+                            ${imgHtml}
+                            <div class="availability-badge ${!available ? 'out-of-stock' : ''}">
+                                ${available ? 'Disponible' : 'Agotado'}
+                            </div>
+                            <div class="product-info">
+                                <div class="product-name">${name}</div>
+                                <div class="product-description">${displayDesc}</div>
+                                <div class="price">L ${recipe.price}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
 
-                    </div> </div> <div class="product-info" > <div class="product-name" >$ {
-                        name
-                    }
-
-                    </div> <div class="product-description" >$ {
-                        displayDesc
-                    }
-
-                    </div> <div class="price" >L $ {
-                        recipe.price
-                    }
-
-                    </div> </div> </div> `;
-            }).join('');
+            grid.innerHTML = html;
         }
 
         function openProductModal(kitName) {

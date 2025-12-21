@@ -1929,7 +1929,9 @@
             state.catalogData = state.catalogData || {};
 
             container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
-                const catalogInfo = state.catalogData[kitName] || { images: [], description: '', customItems: [] };
+                const catalogInfo = state.catalogData[kitName] || { images: [], description: '', customItems: [], category: 'Otros' };
+                if (!state.catalogData[kitName]) state.catalogData[kitName] = catalogInfo; // Ensure it exists in state
+
 
                 // BACKWARD COMPATIBILITY: Migrate single 'image' to 'images' array
                 if (catalogInfo.image && (!catalogInfo.images || catalogInfo.images.length === 0)) {
@@ -1977,6 +1979,20 @@
                                     ${galleryHtml}
                                 </div>
                                 <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Clic en "+" para subir o arrastra una imagen. La primera es la principal.</p>
+                            </div>
+
+                                <div class="form-group">
+                                    <label>Categoría</label>
+                                    <select 
+                                        onchange="state.catalogData['${kitName}'].category = this.value; saveState();"
+                                        style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background: white;">
+                                        <option value="Kits" ${catalogInfo.category === 'Kits' ? 'selected' : ''}>Kits</option>
+                                        <option value="Figuras Grandes" ${catalogInfo.category === 'Figuras Grandes' ? 'selected' : ''}>Figuras Grandes</option>
+                                        <option value="Figuras Medianas" ${catalogInfo.category === 'Figuras Medianas' ? 'selected' : ''}>Figuras Medianas</option>
+                                        <option value="Figuras Pequeñas" ${catalogInfo.category === 'Figuras Pequeñas' ? 'selected' : ''}>Figuras Pequeñas</option>
+                                        <option value="Otros" ${catalogInfo.category === 'Otros' ? 'selected' : ''}>Otros</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
