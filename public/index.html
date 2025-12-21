@@ -187,7 +187,9 @@
         .mode-view {
             display: none;
             width: 100%;
-            height: 100%;
+            min-height: 100%;
+            /* Allow growth */
+            height: auto;
         }
 
         .mode-view.active {
@@ -198,6 +200,10 @@
         #admin-mode {
             background-color: #f1f5f9;
             padding: 40px;
+            min-height: 100vh;
+            /* Enforce full screen height coverage */
+            box-sizing: border-box;
+            /* Maintain padding within height */
         }
 
         /* Inventory Cards */
@@ -922,6 +928,9 @@
                 <i class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span>
             </a>
             <div class="nav-separator">GESTIÓN</div>
+            <button class="nav-item" onclick="showModule('product-entry')" id="btn-product-entry">
+                <i class="fa-solid fa-plus-circle"></i> <span>Ingreso Producto</span>
+            </button>
             <button class="nav-item" onclick="showModule('stock')" id="btn-stock">
                 <i class="fa-solid fa-boxes-stacked"></i> <span>Inventario</span>
             </button>
@@ -1381,6 +1390,8 @@
                                     <option value="paletas">Paletas</option>
                                     <option value="envases">Envases</option>
                                 </select>
+                                <small id="current-stock-display"
+                                    style="display:block; margin-top:5px; color:#64748b; font-weight:600;"></small>
                             </div>
                             <div class="form-group">
                                 <label>Categoría</label>
@@ -1391,7 +1402,7 @@
                                     style="display:none; margin-top:5px; border:1px solid #3b82f6;">
                             </div>
                             <div class="form-group">
-                                <label>Cantidad (Stock)</label>
+                                <label>Cantidad a descontar (de Inventario)</label>
                                 <input type="number" id="single-qty" value="1" min="1" required>
                             </div>
                             <div class="form-group">
@@ -2076,16 +2087,16 @@
                                 <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Clic en "+" para subir o arrastra una imagen. La primera es la principal.</p>
                             </div>
 
+                            <div>
                                 <div class="form-group">
                                     <label>Categoría</label>
                                     <select 
                                         onchange="state.catalogData['${kitName}'].category = this.value; saveState();"
                                         style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; background: white;">
-                                        <option value="Kits" ${catalogInfo.category === 'Kits' ? 'selected' : ''}>Kits</option>
-                                        <option value="Figuras Grandes" ${catalogInfo.category === 'Figuras Grandes' ? 'selected' : ''}>Figuras Grandes</option>
-                                        <option value="Figuras Medianas" ${catalogInfo.category === 'Figuras Medianas' ? 'selected' : ''}>Figuras Medianas</option>
-                                        <option value="Figuras Pequeñas" ${catalogInfo.category === 'Figuras Pequeñas' ? 'selected' : ''}>Figuras Pequeñas</option>
-                                        <option value="Otros" ${catalogInfo.category === 'Otros' ? 'selected' : ''}>Otros</option>
+                                        ${getUniqueCategories().map(c =>
+                    `<option value="${c}" ${catalogInfo.category === c ? 'selected' : ''}>${c}</option>`
+                ).join('')}
+                                        <option value="otroc">Otro...</option>
                                     </select>
                                 </div>
                             </div>
@@ -2553,22 +2564,51 @@
 
         // --- INGRESO PRODUCTO (SINGLE ITEM) ---
         function getUniqueCategories() {
-            const defaults = ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas', 'Otros'];
+            const defaults = ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas'];
             const used = Object.values(state.catalogData || {}).map(c => c.category).filter(Boolean);
-            return [...new Set([...defaults, ...used])];
+            return [...new Set([...defaults, ...used])].filter(c => c !== 'Otros'); // Also filter out if it comes from used, per user request to "only leave Otro..."
         }
 
         function renderProductEntryModule() {
-            const select = document.getElementById('single-category');
-            if (!select) return;
+            // 1. Categories
+            const selectCat = document.getElementById('single-category');
+            if (selectCat) {
+                const categories = getUniqueCategories();
+                let html = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+                html += `<option value="otroc">Otro...</option>`;
+                selectCat.innerHTML = html;
+                selectCat.value = categories[0];
+                toggleNewCategoryInput();
+            }
 
-            const categories = getUniqueCategories();
-            let html = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-            html += `<option value="otroc">Otro...</option>`; // Special value for trigger
+            // 2. Base Type (Inventory) - Dynamic
+            const selectType = document.getElementById('single-type');
+            if (selectType) {
+                const inventory = state.inventoryData || {};
+                const sortedKeys = Object.keys(inventory).sort((a, b) => (inventory[a].name || a).localeCompare(inventory[b].name || b));
 
-            select.innerHTML = html;
-            select.value = categories[0]; // Default select first
-            toggleNewCategoryInput();
+                let html = sortedKeys.map(key => {
+                    const item = inventory[key];
+                    return `<option value="${key}">${item.name || key} (${item.unit || 'uds'})</option>`;
+                }).join('');
+
+                selectType.innerHTML = html;
+                selectType.onchange = updateAvailableStockDisplay;
+                updateAvailableStockDisplay();
+            }
+        }
+
+        function updateAvailableStockDisplay() {
+            const select = document.getElementById('single-type');
+            const display = document.getElementById('current-stock-display');
+            if (!select || !display) return;
+
+            const key = select.value;
+            const currentStock = state.stock[key] || 0;
+            const itemUnit = state.inventoryData[key]?.unit || 'uds';
+
+            display.innerText = `Disponible en Sistema: ${currentStock} ${itemUnit}`;
+            display.style.color = currentStock > 0 ? '#059669' : '#dc2626';
         }
 
         function toggleNewCategoryInput() {

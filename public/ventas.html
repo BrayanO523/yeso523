@@ -887,6 +887,13 @@
     </div>
     <div class="container">
         <h1 class="page-title">Nuestros Kits</h1>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar" id="category-filters"
+            style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 20px;">
+            <!-- Dynamic buttons will go here -->
+        </div>
+
         <p class="results-count" id="results-count">Cargando productos...</p>
         <div class="products-grid" id="products-grid"></div>
     </div>
@@ -1085,6 +1092,22 @@
             renderProducts();
         }
 
+        function renderFilterButtons(categories) {
+            const container = document.getElementById('category-filters');
+            if (!container) return;
+
+            let html = `<button class="filter-btn ${currentCategory === 'all' ? 'active' : ''}" onclick="filterProducts('all')" 
+                style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e2e8f0; background: ${currentCategory === 'all' ? '#3b82f6' : 'white'}; color: ${currentCategory === 'all' ? 'white' : '#64748b'}; cursor: pointer; white-space: nowrap;">Todos</button>`;
+
+            categories.forEach(cat => {
+                const isActive = currentCategory === cat;
+                html += `<button class="filter-btn ${isActive ? 'active' : ''}" onclick="filterProducts('${cat}')"
+                    style="padding: 8px 16px; border-radius: 20px; border: 1px solid #e2e8f0; background: ${isActive ? '#3b82f6' : 'white'}; color: ${isActive ? 'white' : '#64748b'}; cursor: pointer; white-space: nowrap;">${cat}</button>`;
+            });
+
+            container.innerHTML = html;
+        }
+
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const recipes = state.recipes || {};
@@ -1125,8 +1148,24 @@
                     if (idxB !== -1) return 1;
                     return a.localeCompare(b);
                 });
+                renderFilterButtons(categoriesToShow);
             } else {
                 categoriesToShow = [currentCategory];
+                // Should we re-render buttons? Ideally yes to show active state, 
+                // but we need the FULL list. 
+                // Simplified: when filtering, we usually keep the list visible.
+                // Let's rely on the initial load or "All" view to populate full list, 
+                // OR we can pass the full keys of 'grouped' regardless.
+                // Re-calculating full list:
+                const allCats = Object.keys(grouped).sort((a, b) => {
+                    const idxA = defaultOrder.indexOf(a);
+                    const idxB = defaultOrder.indexOf(b);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+                renderFilterButtons(allCats);
             }
 
             let html = '';
