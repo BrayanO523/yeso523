@@ -1486,9 +1486,10 @@
                         <div class="tile">
                             <h3>Crear Nuevo Diseño de Kit</h3>
                             <form id="kit-config-form" class="admin-form">
+                                <input type="hidden" id="original-kit-name">
                                 <div class="form-group">
                                     <label>Nombre del Kit</label>
-                                    <input type="text" id="kit-name" placeholder="Ej: Kit Cumpleaños" required>
+                                    <input type="text" id="kit-name" required placeholder="Ej: Kit Básico">
                                 </div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                     <div class="form-group">
@@ -2099,7 +2100,10 @@
                         <div style="font-size:11px; color:#64748b; margin-top:5px; text-align:left;">
                             ${Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${state.inventoryData[k]?.name || k}: ${v}`).join(' | ')}
                         </div>
-                        <button onclick="removeKit('${name}')" style="margin-top:8px; font-size:11px; color:#ef4444; background:none; border:1px solid #ef4444; border-radius:4px; padding:2px 5px; cursor:pointer;">Eliminar</button>
+                        <div style="margin-top:8px; display:flex; gap:10px;">
+                             <button onclick="editKit('${name}')" style="font-size:11px; color:#3b82f6; background:none; border:1px solid #3b82f6; border-radius:4px; padding:2px 8px; cursor:pointer;">Editar</button>
+                             <button onclick="removeKit('${name}')" style="font-size:11px; color:#ef4444; background:none; border:1px solid #ef4444; border-radius:4px; padding:2px 8px; cursor:pointer;">Eliminar</button>
+                        </div>
                     </div>
                 `).join('');
             }
@@ -2380,6 +2384,21 @@
             kitForm.onsubmit = (e) => {
                 e.preventDefault();
                 const name = document.getElementById('kit-name').value;
+                const originalName = document.getElementById('original-kit-name').value;
+
+                // Handle Rename
+                if (originalName && originalName !== name) {
+                    if (confirm(`¿Cambiar nombre del kit de "${originalName}" a "${name}"?`)) {
+                        delete state.recipes[originalName];
+                        // Migrate Catalog Data
+                        if (state.catalogData && state.catalogData[originalName]) {
+                            state.catalogData[name] = state.catalogData[originalName];
+                            delete state.catalogData[originalName];
+                        }
+                    } else {
+                        return; // Cancel functionality if user denies rename
+                    }
+                }
 
                 state.recipes[name] = {
                     figura_g: parseInt(document.getElementById('kit-figura-g').value) || 0,
@@ -2392,11 +2411,45 @@
                     envases: parseInt(document.getElementById('kit-envases').value) || 0,
                     price: parseFloat(document.getElementById('kit-price').value)
                 };
+
                 saveState();
-                e.target.reset();
-                updateKitStats();
+                // Reset Form
+                cancelEditKit();
                 alert(`Kit "${name}" guardado correctamente.`);
             };
+        }
+
+        function editKit(name) {
+            const recipe = state.recipes[name];
+            if (!recipe) return;
+
+            document.getElementById('kit-name').value = name;
+            document.getElementById('original-kit-name').value = name;
+
+            document.getElementById('kit-figura-g').value = recipe.figura_g || 0;
+            document.getElementById('kit-figura-p').value = recipe.figura_p || 0;
+            document.getElementById('kit-roja').value = recipe.t_roja || 0;
+            document.getElementById('kit-amarilla').value = recipe.t_amarilla || 0;
+            document.getElementById('kit-azul').value = recipe.t_azul || 0;
+            document.getElementById('kit-pinceles').value = recipe.pinceles || 0;
+            document.getElementById('kit-paletas').value = recipe.paletas || 0;
+            document.getElementById('kit-envases').value = recipe.envases || 0;
+            document.getElementById('kit-price').value = recipe.price;
+
+            // UI Mode
+            document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Actualizar Kit';
+            document.getElementById('cancel-edit-btn').style.display = 'block';
+            document.getElementById('stock-module').scrollTo({ top: 0, behavior: 'smooth' });
+
+            updateKitStats();
+        }
+
+        function cancelEditKit() {
+            document.getElementById('kit-config-form').reset();
+            document.getElementById('original-kit-name').value = '';
+            document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Guardar Configuración';
+            document.getElementById('cancel-edit-btn').style.display = 'none';
+            updateKitStats();
         }
 
         const saleSelectEl = document.getElementById('sale-type');
