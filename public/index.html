@@ -2675,101 +2675,119 @@
 
         // --- DYNAMIC KIT CREATION ---
 
-        function addKitComponentRow(preselectedItem = null, preselectedQty = 1) {
-            const container = document.getElementById('kit-components-container');
-            if (!container) return;
+        // --- DYNAMIC KIT CREATION ---
 
-            const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+        function getInventoryOptionsHtml() {
             const inventory = state.inventoryData || {};
-            const sortedKeys = Object.keys(inventory).sort((a, b) => (inventory[a].name || a).localeCompare(inventory[b].name || b));
+            // Filter out nulls/undefined entries first
+            const validKeys = Object.keys(inventory).filter(k => inventory[k]);
 
-            let optionsHtml = sortedKeys.map(key => {
+            const sortedKeys = validKeys.sort((a, b) => {
+                const nameA = inventory[a].name || a;
+                const nameB = inventory[b].name || b;
+                return nameA.localeCompare(nameB);
+            });
+
+            return sortedKeys.map(key => {
                 const item = inventory[key];
                 return `<option value="${key}">${item.name || key} (${item.unit || 'uds'})</option>`;
             }).join('');
+        }
 
-            const div = document.createElement('div');
-            div.className = 'kit-component-row';
-            div.id = rowId;
-            div.style.display = 'grid';
-            div.style.gridTemplateColumns = '2fr 1fr auto';
-            div.style.gap = '10px';
-            div.style.alignItems = 'center';
-            div.style.background = '#f8fafc';
-            div.style.padding = '10px';
-            div.style.borderRadius = '6px';
-            div.style.border = '1px solid #e2e8f0';
+        function addKitComponentRow(preselectedItem = null, preselectedQty = 1, cachedOptions = null) {
+            const container = document.getElementById('kit-components-container');
+            if (!container) return;
 
-            div.innerHTML = `
-                <div style="display:flex; flex-direction:column;">
-                    <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Material</label>
-                    <select class="component-select" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" onchange="updateKitStats()">
-                        ${optionsHtml}
-                    </select>
-                </div>
-                <div style="display:flex; flex-direction:column;">
-                    <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Cantidad</label>
-                    <input type="number" class="component-qty" value="${preselectedQty}" step="any" min="0" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" oninput="updateKitStats()">
-                </div>
-                <button type="button" onclick="document.getElementById('${rowId}').remove(); updateKitStats();" style="background:#ef4444; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; margin-top:14px;">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            `;
+            try {
+                const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                const optionsHtml = cachedOptions || getInventoryOptionsHtml();
 
-            container.appendChild(div);
+                const div = document.createElement('div');
+                div.className = 'kit-component-row';
+                div.id = rowId;
+                div.style.display = 'grid';
+                div.style.gridTemplateColumns = '2fr 1fr auto';
+                div.style.gap = '10px';
+                div.style.alignItems = 'center';
+                div.style.background = '#f8fafc';
+                div.style.padding = '10px';
+                div.style.borderRadius = '6px';
+                div.style.border = '1px solid #e2e8f0';
 
-            if (preselectedItem) {
-                div.querySelector('.component-select').value = preselectedItem;
-            } else {
-                // If it's a new empty row, default to first item
-                if (sortedKeys.length > 0) div.querySelector('.component-select').value = sortedKeys[0];
+                div.innerHTML = `
+                    <div style="display:flex; flex-direction:column;">
+                        <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Material</label>
+                        <select class="component-select" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" onchange="updateKitStats()">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column;">
+                        <label style="font-size:12px; color:#64748b; margin-bottom:2px;">Cantidad</label>
+                        <input type="number" class="component-qty" value="${preselectedQty}" step="any" min="0" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px;" oninput="updateKitStats()">
+                    </div>
+                    <button type="button" onclick="document.getElementById('${rowId}').remove(); updateKitStats();" style="background:#ef4444; color:white; border:none; padding:8px; border-radius:4px; cursor:pointer; margin-top:14px;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+
+                container.appendChild(div);
+
+                if (preselectedItem) {
+                    const select = div.querySelector('.component-select');
+                    select.value = preselectedItem;
+                    // If the item doesn't exist in options (deleted inventory?), it defaults to first.
+                    // We could optionally warn or handle this, but for now default is safe.
+                }
+                updateKitStats();
+
+            } catch (e) {
+                console.error("Error adding kit row:", e);
             }
-            updateKitStats();
+        }
+
+        // Alias for missing function
+        function renderKitCatalog() {
+            // Re-render the kit list locally or full UI
+            // The kit list is rendered inside updateUI -> 'kit-catalog-list'
+            // We can just call updateUI() or specifically logic if extracted.
+            // Since updateUI is heavy, we'll try to just trigger a re-render if possible, but updateUI is safest.
+            if (typeof updateUI === 'function') updateUI();
         }
 
         function updateKitStats() {
-            const rows = document.querySelectorAll('.kit-component-row');
-            let totalCost = 0;
+            try {
+                const rows = document.querySelectorAll('.kit-component-row');
+                let totalCost = 0;
 
-            rows.forEach(row => {
-                const itemKey = row.querySelector('.component-select').value;
-                const qty = parseFloat(row.querySelector('.component-qty').value) || 0;
-
-                // Estimate cost (Using hardcoded assumptions from original code or 0 if unknown)
-                // In a real scenario, inventory items should have a 'cost' field. 
-                // Currently code has hardcoded costs in 'unitCosts' variable in salesForm, but not globally accessible easily.
-                // We'll try to map common items to known costs for estimation, else 0.
-
-                // Quick map based on original code:
                 const costs = {
                     figura_g: 10.42,
                     figura_p: 3.47,
                     t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522,
                     pinceles: 4.00, paletas: 4.00, envases: 2.66
-                }; // Fallback map
+                };
 
-                // If inventory has cost, use it (future proofing), else use fallback map
-                // NOTE: Current state.inventoryData doesn't seem to have 'cost' property based on view_file usage, 
-                // but let can add rudimentary check.
+                rows.forEach(row => {
+                    const select = row.querySelector('.component-select');
+                    const qtyInput = row.querySelector('.component-qty');
 
-                let unitCost = costs[itemKey] || 0;
-                totalCost += (unitCost * qty);
-            });
+                    if (!select || !qtyInput) return;
 
-            const suggestedPrice = totalCost * 2.5; // Margin logic
+                    const itemKey = select.value;
+                    const qty = parseFloat(qtyInput.value) || 0;
 
-            // DOM Updates
-            const costDisplay = document.getElementById('suggested-cost-display');
-            const priceDisplay = document.getElementById('suggested-price-display');
-            if (costDisplay) costDisplay.innerText = `L ${totalCost.toFixed(2)}`;
-            if (priceDisplay) priceDisplay.innerText = `L ${suggestedPrice.toFixed(0)}.00`;
+                    let unitCost = costs[itemKey] || 0;
+                    totalCost += (unitCost * qty);
+                });
 
-            // Only auto-update price if it's new/default
-            const priceInput = document.getElementById('kit-price');
-            // Check if user is editing a price manually or if it's a fresh calc
-            if (priceInput && (priceInput.dataset.touched !== 'true')) {
-                // Optional: Auto-suggest? Maybe better to just show calculation and let user decide.
-                // priceInput.value = suggestedPrice.toFixed(0);
+                const suggestedPrice = totalCost * 2.5;
+
+                const costDisplay = document.getElementById('suggested-cost-display');
+                const priceDisplay = document.getElementById('suggested-price-display');
+                if (costDisplay) costDisplay.innerText = `L ${totalCost.toFixed(2)}`;
+                if (priceDisplay) priceDisplay.innerText = `L ${suggestedPrice.toFixed(0)}.00`;
+
+            } catch (e) {
+                console.error("Error updating stats:", e);
             }
         }
 
@@ -2824,7 +2842,7 @@
                 // Cleanup
                 cancelEditKit();
                 alert(`Kit "${name}" guardado correctamente.`);
-                renderKitCatalog(); // Refresh list
+                renderKitCatalog();
             };
         }
 
@@ -2841,14 +2859,17 @@
             const container = document.getElementById('kit-components-container');
             container.innerHTML = '';
 
+            // Generate options once
+            const optionsHtml = getInventoryOptionsHtml();
+
             Object.entries(recipe).forEach(([key, value]) => {
                 if (key === 'price') return;
-                addKitComponentRow(key, value);
+                addKitComponentRow(key, value, optionsHtml);
             });
 
             // If empty (edge case), add one empty row
             if (container.children.length === 0) {
-                addKitComponentRow();
+                addKitComponentRow(null, 1, optionsHtml);
             }
 
             // UI Mode
