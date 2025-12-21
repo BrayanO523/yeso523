@@ -8,11 +8,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
-    <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* (Estilos originales conservados) */
         * {
             margin: 0;
             padding: 0;
@@ -25,7 +27,6 @@
             color: #333;
         }
 
-        /* Header */
         .header {
             background: white;
             border-bottom: 1px solid #e0e0e0;
@@ -82,7 +83,6 @@
             font-weight: 700;
         }
 
-        /* Main */
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -102,7 +102,6 @@
             font-size: 14px;
         }
 
-        /* Products Grid */
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -131,6 +130,8 @@
             align-items: center;
             justify-content: center;
             position: relative;
+            background-size: cover;
+            background-position: center;
         }
 
         .product-image i {
@@ -183,7 +184,6 @@
             color: #1a1a1a;
         }
 
-        /* Product Detail Modal */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -238,6 +238,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background-size: cover;
+            background-position: center;
         }
 
         .modal-image i {
@@ -343,7 +345,6 @@
             cursor: not-allowed;
         }
 
-        /* Cart Sidebar */
         .cart-sidebar {
             position: fixed;
             right: -400px;
@@ -483,7 +484,6 @@
             opacity: 0.3;
         }
 
-        /* Overlay */
         .overlay {
             position: fixed;
             top: 0;
@@ -499,7 +499,6 @@
             display: block;
         }
 
-        /* Loading */
         .loading {
             position: fixed;
             top: 0;
@@ -526,7 +525,6 @@
             }
         }
 
-        /* Toast */
         .toast {
             position: fixed;
             bottom: -100px;
@@ -581,7 +579,6 @@
         <div class="products-grid" id="products-grid"></div>
     </div>
 
-    <!-- Product Detail Modal -->
     <div class="modal-overlay" id="product-modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-times"></i></button>
@@ -616,7 +613,6 @@
         </div>
     </div>
 
-    <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-header">
             <h2>Carrito</h2>
@@ -642,24 +638,43 @@
     <script>
         let db = null, state = {}, cart = [], currentProduct = null, modalQty = 1;
 
-        function checkFirebase() {
-            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') initApp();
-            else setTimeout(checkFirebase, 100);
-        }
-        checkFirebase();
+        // IMPORTANTE: REEMPLAZA ESTO CON TUS DATOS DE FIREBASE CONSOLE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKtBLWwgRgGtXeldzZZxqJQaiwZkQbB8k",
+            authDomain: "yesos-836cd.firebaseapp.com",
+            projectId: "yesos-836cd",
+            storageBucket: "yesos-836cd.firebasestorage.app",
+            messagingSenderId: "74266048840",
+            appId: "1:74266048840:web:206b5e646230b956de9b7d",
+            measurementId: "G-7N653JJ4PG"
+        };
 
-        async function initApp() {
+        function initApp() {
             try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
                 db = firebase.firestore();
-                await loadData();
-                renderProducts();
+                loadData().then(() => {
+                    renderProducts();
+                    document.getElementById('loading').style.display = 'none';
+                });
+            } catch (e) {
+                console.error(e);
+                alert("Error al cargar el catálogo: Verifique la consola");
                 document.getElementById('loading').style.display = 'none';
-            } catch (e) { console.error(e); alert("Error al cargar el catálogo"); }
+            }
         }
+
+        // Iniciar inmediatamente si firebase está cargado
+        if (typeof firebase !== 'undefined') initApp();
+        else window.onload = initApp;
 
         async function loadData() {
-            const doc = await db.collection('config').doc('inventoryState').get();
-            if (doc.exists) state = doc.data();
+            try {
+                const doc = await db.collection('config').doc('inventoryState').get();
+                if (doc.exists) state = doc.data();
+            } catch (e) { console.error("Error cargando datos", e); }
         }
 
         function checkAvailability(recipe) {
@@ -670,9 +685,11 @@
             return true;
         }
 
+        // --- LÓGICA DE CATÁLOGO ACTUALIZADA ---
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const recipes = state.recipes || {};
+            const catalogData = state.catalogData || {}; // Datos de imagen/descripción
             const count = Object.keys(recipes).length;
             document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
 
@@ -683,16 +700,25 @@
 
             grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
                 const available = checkAvailability(recipe);
-                const description = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
+                const catalog = catalogData[name] || {}; // Obtener datos extra
+
+                // Usar descripción personalizada O la lista automática de ingredientes
+                const description = catalog.description || Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
+
+                // Configurar imagen de fondo si existe
+                const hasCustomImage = catalog.image && catalog.image.trim();
+                const imageStyle = hasCustomImage ? `background-image: url('${catalog.image}'); background-size: cover; background-position: center;` : '';
+
                 return `
                     <div class="product-card" onclick="openProductModal('${name}')">
-                        <div class="product-image"><i class="fa-solid fa-box-open"></i>
+                        <div class="product-image" style="${imageStyle}">
+                            ${!hasCustomImage ? '<i class="fa-solid fa-box-open"></i>' : ''}
                             <div class="availability-badge ${!available ? 'out-of-stock' : ''}">${available ? 'Disponible' : 'Agotado'}</div>
                         </div>
                         <div class="product-info">
                             <div class="product-name">${name}</div>
                             <div class="product-description">${description}</div>
-                            <div class="price">$ ${recipe.price}</div>
+                            <div class="price">L ${recipe.price}</div>
                         </div>
                     </div>
                 `;
@@ -705,11 +731,35 @@
             if (!recipe) return;
 
             const available = checkAvailability(recipe);
-            const description = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join('<br>• ');
+            const catalog = (state.catalogData || {})[kitName] || {};
+
+            // Determinar qué lista mostrar (Personalizada vs Automática)
+            let itemsList;
+            if (catalog.customItems && catalog.customItems.length > 0) {
+                itemsList = catalog.customItems.join('<br>• ');
+            } else {
+                itemsList = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join('<br>• ');
+            }
+
+            // Configurar imagen del modal
+            const modalImage = document.getElementById('modal-image');
+            if (catalog.image && catalog.image.trim()) {
+                modalImage.style.backgroundImage = `url('${catalog.image}')`;
+                modalImage.style.backgroundSize = 'cover';
+                modalImage.style.backgroundPosition = 'center';
+                modalImage.innerHTML = '';
+            } else {
+                modalImage.style.backgroundImage = '';
+                modalImage.innerHTML = '<i class="fa-solid fa-box-open"></i>';
+            }
 
             document.getElementById('modal-title').innerText = kitName;
-            document.getElementById('modal-price').innerText = `$ ${recipe.price}`;
-            document.getElementById('modal-description').innerHTML = `<strong>Incluye:</strong><br>• ${description}`;
+            document.getElementById('modal-price').innerText = `L ${recipe.price}`;
+            document.getElementById('modal-description').innerHTML = `<strong>Incluye:</strong><br>• ${itemsList}`;
+            if (catalog.description) {
+                document.getElementById('modal-description').innerHTML = `<p style="margin-bottom:10px;">${catalog.description}</p>` + document.getElementById('modal-description').innerHTML;
+            }
+
             document.getElementById('modal-stock-info').innerText = available ? '(Disponible)' : '(Sin stock)';
             document.getElementById('modal-add-cart').disabled = !available;
             document.getElementById('modal-buy-now').disabled = !available;
@@ -718,6 +768,7 @@
             document.getElementById('product-modal').classList.add('active');
             document.getElementById('overlay').classList.add('active');
         }
+        // --- FIN LÓGICA DE CATÁLOGO ---
 
         function closeModal() {
             document.getElementById('product-modal').classList.remove('active');
@@ -768,9 +819,15 @@
             if (cart.length === 0) {
                 cartItems.innerHTML = '<div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i><p>Tu carrito está vacío</p></div>';
             } else {
-                cartItems.innerHTML = cart.map((item, index) => `
+                cartItems.innerHTML = cart.map((item, index) => {
+                    const catalog = (state.catalogData || {})[item.name] || {};
+                    const hasCustomImage = catalog.image && catalog.image.trim();
+                    const imageStyle = hasCustomImage ? `background-image: url('${catalog.image}'); background-size: cover; background-position: center;` : '';
+                    const imageContent = hasCustomImage ? '' : '<i class="fa-solid fa-box-open"></i>';
+
+                    return `
                     <div class="cart-item">
-                        <div class="cart-item-image"><i class="fa-solid fa-box-open"></i></div>
+                        <div class="cart-item-image" style="${imageStyle}">${imageContent}</div>
                         <div class="cart-item-details">
                             <div class="cart-item-name">${item.name}</div>
                             <div class="cart-item-price">L ${item.price.toFixed(2)}</div>
@@ -781,7 +838,7 @@
                             </div>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
             }
         }
 
@@ -849,7 +906,6 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
     </script>
-
 </body>
 
 </html>

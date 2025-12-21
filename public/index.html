@@ -17,6 +17,7 @@
     <!-- Firebase SDKs -->
     <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-storage-compat.js"></script>
     <script defer src="/__/firebase/init.js?useEmulator=false"></script>
     <!-- Chart.js for Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -245,6 +246,26 @@
             background-position: center;
         }
 
+        /* MOBILE OVERLAY */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1900;
+            display: none;
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .mobile-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
         /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             body {
@@ -256,33 +277,52 @@
                 left: -280px;
                 top: 0;
                 width: 280px;
-                height: 100vh;
+                height: 100dvh;
+                /* Dynamic Height */
                 box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
-                transition: left 0.3s ease;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
             .sidebar.active {
                 left: 0;
             }
 
+            /* Move toggle button to be always visible on top-left when sidebar closed */
             .sidebar-toggle {
-                right: -35px;
-                top: 25px;
-                width: 40px;
-                height: 40px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+                position: fixed;
+                left: 20px;
+                top: 20px;
+                right: auto;
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+                background: #1e293b;
+                color: white;
+                border: none;
+                z-index: 2100;
+                /* Above sidebar */
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+
+            /* When sidebar is open, move toggle inside/stick to it */
+            .sidebar.active .sidebar-toggle {
+                left: 230px;
+                /* Inside sidebar width */
+                background: var(--highlight);
             }
 
             #admin-mode {
-                padding: 20px 15px;
+                padding: 80px 15px 30px 15px;
+                /* Top padding for toggle button */
             }
 
             .dashboard-grid {
                 grid-template-columns: 1fr;
+                gap: 20px;
             }
 
             .inventory-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 15px;
             }
 
@@ -291,39 +331,47 @@
             }
 
             .card-img {
-                width: 70px;
-                height: 70px;
-                font-size: 28px;
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+                margin-bottom: 10px;
             }
 
+            .card-qty {
+                font-size: 22px;
+            }
+
+            /* Scrollable Tables */
             .financial-table-wrapper {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 margin-top: 15px;
                 border-radius: 8px;
                 border: 1px solid #e2e8f0;
+                background: white;
             }
 
             .financial-table {
                 min-width: 600px;
-                /* Force scroll on small screens */
                 margin-top: 0;
             }
 
-            .modal-content {
-                width: 95% !important;
-                padding: 20px !important;
+            /* Better Touch Targets */
+            .nav-item {
+                padding: 18px 20px;
+                font-size: 16px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             }
 
-            /* Better touch targets for controls */
             .control-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
+                padding: 15px;
             }
 
-            .card-qty {
-                font-size: 1.2rem;
+            input,
+            select,
+            button {
+                font-size: 16px !important;
+                /* Prevent zoom on IOS */
             }
         }
 
@@ -549,6 +597,8 @@
             border-radius: 8px;
             font-size: 16px;
         }
+
+
 
         .primary-btn {
             background-color: var(--highlight);
@@ -878,11 +928,18 @@
             <button class="nav-item" onclick="showModule('purchases')" id="btn-purchases">
                 <i class="fa-solid fa-cart-shopping"></i> <span>Compras</span>
             </button>
+            <button class="nav-item" onclick="showModule('orders')" id="btn-orders">
+                <i class="fa-solid fa-clipboard-check"></i> <span>Pedidos</span>
+            </button>
             <button class="nav-item" onclick="showModule('sales')" id="btn-sales">
                 <i class="fa-solid fa-file-invoice-dollar"></i> <span>Ventas/Facturas</span>
             </button>
             <button class="nav-item" onclick="showModule('catalog')" id="btn-catalog">
                 <i class="fa-solid fa-store"></i> <span>Catálogo Web</span>
+            </button>
+            <div class="nav-separator">FINANZAS</div>
+            <button class="nav-item" onclick="showModule('financial')" id="btn-financial">
+                <i class="fa-solid fa-chart-pie"></i> <span>Balance Financiero</span>
             </button>
 
             <div
@@ -894,9 +951,10 @@
             </div>
         </nav>
         <div class="sidebar-toggle" id="sidebarToggle">
-            <i class="fa-solid fa-chevron-left"></i>
+            <i class="fa-solid fa-bars"></i>
         </div>
     </div>
+    <div class="mobile-overlay" id="mobileOver" onclick="toggleMobileSidebar()"></div>
 
     <!-- Main Content Wrapper -->
     <div class="main-content" id="mainContent">
@@ -917,11 +975,13 @@
                     <div style="text-align: center; color: white;">
                         <i class="fa-solid fa-paintbrush"
                             style="font-size: 60px; color: #60a5fa; margin-bottom: 20px;"></i>
-                        <h1 style="color: white; margin-bottom: 20px;">Plan de Negocio:<br>Kits de Yeso + Pintura</h1>
+                        <h1 style="color: white; margin-bottom: 20px;">Plan de Negocio:<br>Kits de Yeso + Pintura
+                        </h1>
                         <p style="color: #94a3b8; font-size: 24px;">Análisis de Costos y Producción 2025</p>
                         <div
                             style="margin-top: 50px; padding: 15px 30px; background: rgba(255,255,255,0.1); border-radius: 50px; display: inline-block;">
-                            <span style="color: #60a5fa; font-weight: 700;">ACTUALIZADO:</span> Mano de Obra reducida a
+                            <span style="color: #60a5fa; font-weight: 700;">ACTUALIZADO:</span> Mano de Obra
+                            reducida a
                             L 30.00
                         </div>
                     </div>
@@ -933,17 +993,21 @@
                     <div class="content-area">
                         <div class="two-column">
                             <div>
-                                <p class="mb-4">Para un lote estándar de producción (Rendimiento: 400g mezcla húmeda).
+                                <p class="mb-4">Para un lote estándar de producción (Rendimiento: 400g mezcla
+                                    húmeda).
                                 </p>
                                 <div class="recipe-card">
-                                    <h3 style="font-size: 24px; margin-bottom: 15px; color: #92400e;">Ingredientes</h3>
+                                    <h3 style="font-size: 24px; margin-bottom: 15px; color: #92400e;">Ingredientes
+                                    </h3>
                                     <ul style="list-style: none; padding: 0;">
                                         <li style="margin-bottom: 10px; font-weight: 600;">• 200g Yeso</li>
-                                        <li style="margin-bottom: 10px; font-weight: 600;">• 100g Cemento Blanco</li>
+                                        <li style="margin-bottom: 10px; font-weight: 600;">• 100g Cemento Blanco
+                                        </li>
                                         <li style="margin-bottom: 10px; font-weight: 600;">• 100g Agua</li>
                                     </ul>
                                 </div>
-                                <p style="font-size: 18px; color: #64748b;"><strong>Produce:</strong> 4 Figuras Grandes
+                                <p style="font-size: 18px; color: #64748b;"><strong>Produce:</strong> 4 Figuras
+                                    Grandes
                                     + 3
                                     Pequeñas
                                     (7 Total)</p>
@@ -965,7 +1029,8 @@
                                 <i class="fa-solid fa-blender"
                                     style="font-size: 40px; color: #475569; margin-bottom: 20px;"></i>
                                 <h3>1. Mezcla</h3>
-                                <p style="font-size: 16px;">Integrar polvos en seco, luego añadir agua gradualmente.</p>
+                                <p style="font-size: 16px;">Integrar polvos en seco, luego añadir agua gradualmente.
+                                </p>
                             </div>
                             <div class="tile">
                                 <i class="fa-solid fa-sun"
@@ -1019,7 +1084,8 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <p style="margin-top: 15px; font-size: 16px; color: #64748b;">*Antes el lote costaba L 102.08.
+                        <p style="margin-top: 15px; font-size: 16px; color: #64748b;">*Antes el lote costaba L
+                            102.08.
                             ¡Reducción
                             del 49%!</p>
                     </div>
@@ -1035,7 +1101,8 @@
                                 <h3>Figura GRANDE</h3>
                                 <p style="font-size: 16px; margin-bottom: 5px;">Costo de Producción</p>
                                 <div class="big-number">L 10.42</div>
-                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L 20.40
+                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L
+                                    20.40
                                 </p>
                             </div>
                             <div class="tile">
@@ -1043,11 +1110,13 @@
                                 <h3>Figura PEQUEÑA</h3>
                                 <p style="font-size: 16px; margin-bottom: 5px;">Costo de Producción</p>
                                 <div class="big-number" style="color: #475569;">L 3.47</div>
-                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L 6.80
+                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L
+                                    6.80
                                 </p>
                             </div>
                         </div>
-                        <p style="text-align: center; margin-top: 30px;">Cálculo basado en distribución de material y
+                        <p style="text-align: center; margin-top: 30px;">Cálculo basado en distribución de material
+                            y
                             tiempo del
                             lote de L 52.08.</p>
                     </div>
@@ -1060,9 +1129,11 @@
                         <div class="two-column">
                             <div>
                                 <ul class="bullet-list">
-                                    <li><strong>Herramientas (L 8.00):</strong> Pincel básico + Paleta mezcladora.</li>
+                                    <li><strong>Herramientas (L 8.00):</strong> Pincel básico + Paleta mezcladora.
+                                    </li>
                                     <li><strong>Envases (L 8.00):</strong> 3 Botes vacíos para pintura.</li>
-                                    <li><strong>Pintura (L 7.83):</strong> 15ml de pintura acrílica (3 colores).</li>
+                                    <li><strong>Pintura (L 7.83):</strong> 15ml de pintura acrílica (3 colores).
+                                    </li>
                                 </ul>
                             </div>
                             <div class="tile" style="background: #f8fafc;">
@@ -1078,7 +1149,8 @@
                 <div class="slide-container">
                     <h2 class="slide-title">6. Costo Total "Súper Kit"</h2>
                     <div class="content-area">
-                        <p style="margin-bottom: 15px;">Configuración: 2 Figuras Grandes + 1 Pequeña + Accesorios</p>
+                        <p style="margin-bottom: 15px;">Configuración: 2 Figuras Grandes + 1 Pequeña + Accesorios
+                        </p>
                         <table class="financial-table">
                             <thead>
                                 <tr>
@@ -1175,7 +1247,8 @@
                             style="font-size: 80px; color: #22c55e; margin-bottom: 30px;"></i>
                         <h2 style="font-size: 48px; margin-bottom: 20px;">Plan Actualizado</h2>
                         <p style="max-width: 800px; margin-bottom: 40px;">
-                            Reducir el costo asignado a la mano de obra ha disparado el margen de ganancia potencial por
+                            Reducir el costo asignado a la mano de obra ha disparado el margen de ganancia potencial
+                            por
                             encima
                             del
                             200%, haciendo este modelo de negocio extremadamente atractivo.
@@ -1185,7 +1258,8 @@
                             <span style="font-weight: 700; color: #475569; margin-right: 20px;">COSTO KIT: L
                                 48.14</span>
                             <span style="color: #cbd5e1;">|</span>
-                            <span style="font-weight: 700; color: #2563eb; margin-left: 20px;">GANANCIA: L 101.86</span>
+                            <span style="font-weight: 700; color: #2563eb; margin-left: 20px;">GANANCIA: L
+                                101.86</span>
                         </div>
                     </div>
                 </div>
@@ -1270,7 +1344,8 @@
                                 </div>
                             </div>
                             <div style="display: flex; gap: 15px; margin-top: 20px;">
-                                <button type="submit" class="primary-btn" style="flex: 2;">Confirmar y Guardar</button>
+                                <button type="submit" class="primary-btn" style="flex: 2;">Confirmar y
+                                    Guardar</button>
                                 <button type="button" class="primary-btn" style="flex: 1; background-color: #ef4444;"
                                     onclick="toggleNewProductForm()">Cancelar</button>
                             </div>
@@ -1296,20 +1371,46 @@
                                     <option value="pinceles">Pinceles (uds)</option>
                                     <option value="envases">Envases (uds)</option>
                                 </select>
+                                </select>
+                            </div>
+                            <div class="form-group" id="custom-expense-group" style="display: none;">
+                                <label>Descripción del Gasto</label>
+                                <input type="text" id="custom-expense-desc" placeholder="Ej: Moldes, Reparaciones...">
                             </div>
                             <div class="form-group">
                                 <label>Cantidad</label>
                                 <input type="number" id="purchase-qty" step="0.01" required>
                             </div>
                             <div class="form-group">
+                                <label>Costo Unitario (L)</label>
+                                <input type="number" id="purchase-unit-cost" step="any" placeholder="0.0000">
+                            </div>
+                            <div class="form-group">
                                 <label>Costo Total (L)</label>
-                                <input type="number" id="purchase-cost" step="0.01" required>
+                                <input type="number" id="purchase-cost" step="any" required readonly
+                                    style="background-color: #e2e8f0;">
                             </div>
                             <button type="submit" class="primary-btn">Registrar Compra</button>
                         </form>
                     </div>
                     <div class="tile mt-4">
-                        <h3>Historial de Compras</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Historial de Compras</h3>
+                            <div style="display: flex; gap: 5px;">
+                                <button onclick="exportPurchasesToCSV()" class="primary-btn"
+                                    style="background: #10b981; padding: 8px 15px; font-size: 13px;">
+                                    <i class="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                                <button onclick="exportPurchasesToPDF()" class="primary-btn"
+                                    style="background: #ef4444; padding: 8px 15px; font-size: 13px;">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF
+                                </button>
+                                <button onclick="clearPurchaseHistory()" class="primary-btn"
+                                    style="background: #64748b; padding: 8px 15px; font-size: 13px;">
+                                    <i class="fa-solid fa-trash-can"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
                         <table class="financial-table" id="purchase-history">
                             <thead>
                                 <tr>
@@ -1321,6 +1422,60 @@
                             </thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Pending Orders Module (Added) -->
+                <div id="orders-module" class="admin-module">
+                    <h2 class="slide-title">Pedidos Pendientes</h2>
+                    <p style="color:#64748b; margin-bottom:20px;">Estos pedidos han reservado stock pero aún no se
+                        ha
+                        confirmado el pago. Confirma para registrar la venta o rechaza para devolver el stock.</p>
+                    <div id="pending-orders-list" class="dashboard-grid"></div>
+                </div>
+
+
+
+                <!-- Financial Module (Dedicated View) -->
+                <div id="financial-module" class="admin-module">
+                    <h2 class="slide-title">Balance Financiero General</h2>
+                    <div class="dashboard-grid">
+                        <div class="tile highlight">
+                            <h3>Ingresos Totales (Ventas)</h3>
+                            <div class="big-number" id="dash-income" style="color: #059669;">L 0.00</div>
+                            <p style="color: #64748b; font-size: 0.9em;">Total acumulado de ventas confirmadas.</p>
+                        </div>
+                        <div class="tile highlight" style="border-color: #fca5a5; background: #fef2f2;">
+                            <h3>Gastos Totales (Compras)</h3>
+                            <div class="big-number" id="dash-expenses" style="color: #dc2626;">L 0.00</div>
+                            <p style="color: #64748b; font-size: 0.9em;">Total acumulado de compras e insumos.</p>
+                        </div>
+                        <div class="tile highlight"
+                            style="grid-column: span 1; border-color: #cbd5e1; background: #f8fafc;">
+                            <h3>Balance Neto (Ganancia)</h3>
+                            <div class="big-number" id="dash-balance">L 0.00</div>
+                            <p id="dash-message" style="font-weight: 600;">Calculando...</p>
+                        </div>
+                    </div>
+
+                    <div class="tile mt-4">
+                        <h3>Desglose Rápido</h3>
+                        <div
+                            style="display: flex; gap: 20px; text-align: left; justify-content: space-around; flex-wrap: wrap;">
+                            <div>
+                                <h4 style="margin-bottom: 10px; color: #64748b;">Métricas Clave</h4>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li style="margin-bottom: 8px;"><strong>Margen Promedio:</strong> <span
+                                            id="dash-margin">0%</span></li>
+                                    <li style="margin-bottom: 8px;"><strong>Ticket Promedio:</strong> <span
+                                            id="dash-ticket">L 0.00</span></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 style="margin-bottom: 10px; color: #64748b;">Estado</h4>
+                                <div id="dash-status-icon" style="font-size: 40px;">🤔</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1401,6 +1556,14 @@
                     </div>
                 </div>
 
+                <!-- Catalog Module (Added) -->
+                <div id="catalog-module" class="admin-module">
+                    <h2 class="slide-title">Catálogo Web - Personalización</h2>
+                    <p style="margin-bottom:20px; color:#64748b;">Aquí puedes agregar fotos y descripciones para la
+                        página de ventas.</p>
+                    <div id="catalog-kits-list"></div>
+                </div>
+
                 <!-- Sales Module -->
                 <div id="sales-module" class="admin-module">
                     <h2 class="slide-title">Ventas / Facturación</h2>
@@ -1421,7 +1584,8 @@
                                 </div>
                                 <button type="submit" class="primary-btn success">Realizar Venta</button>
                             </form>
-                            <p class="mt-2 text-small">*Vender un kit descuenta automáticamente materiales del stock.
+                            <p class="mt-2 text-small">*Vender un kit descuenta automáticamente materiales del
+                                stock.
                             </p>
                         </div>
                         <div class="tile">
@@ -1473,15 +1637,20 @@
                                 </tfoot>
                             </table>
                         </div>
-                    </div></div>
-
+                    </div>
                 </div>
+
             </div>
         </div>
+    </div>
 
     </div> <!-- End main-content -->
 
     <!-- Firebase SDK -->
+
+
+
+
     <script>
         /* --- STATE MANAGEMENT --- */
         let db = null;
@@ -1510,6 +1679,7 @@
             purchases: [],
             sales: [],
             recipes: {},
+            pendingOrders: [],
             totalProfit: 0
         };
 
@@ -1551,18 +1721,24 @@
             if (!db) return loadStateLocal();
 
             try {
-                const doc = await db.collection('config').doc('inventoryState').get();
-                if (doc.exists) {
-                    state = doc.data();
-                    console.log("Datos cargados desde Firestore");
-                } else {
+                // Real-time listener
+                db.collection('config').doc('inventoryState').onSnapshot((doc) => {
+                    if (doc.exists) {
+                        state = doc.data();
+                        console.log("Datos actualizados en tiempo real");
+                        updateUI();
+                        updateSyncUI('cloud');
+                    } else {
+                        console.log("Documento no existe, inicializando...");
+                        saveState();
+                    }
+                }, (error) => {
+                    console.error("Error en listener:", error);
+                    updateSyncUI('local');
                     loadStateLocal();
-                    // Migrar a Firestore si no hay datos en la nube
-                    await saveState();
-                }
-                updateUI();
+                });
             } catch (e) {
-                console.warn("Firestore no accesible, usando LocalStorage:", e);
+                console.error("Error al suscribirse:", e);
                 loadStateLocal();
             }
         }
@@ -1611,7 +1787,272 @@
         }
 
         /* --- DASHBOARD LOGIC --- */
+        // --- MÓDULO CATÁLOGO WEB ---
+        function renderCatalogModule() {
+            const container = document.getElementById('catalog-kits-list');
+            if (!container) return;
+
+            const recipes = state.recipes || {};
+            if (Object.keys(recipes).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 60px;">No hay kits creados. Ve a "Mis Kits" para crear uno.</p>';
+                return;
+            }
+
+            // Initialize catalogData if it doesn't exist
+            state.catalogData = state.catalogData || {};
+
+            container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
+                const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
+                const defaultItems = Object.entries(recipe)
+                    .filter(([k]) => k !== 'price')
+                    .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
+                    .join(', ');
+                const safeName = kitName.replace(/\s+/g, '_');
+
+                return `
+                    <div class="tile" style="margin-bottom: 30px;">
+                        <h3 style="margin-bottom: 20px; color: var(--highlight);">${kitName}</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <div class="form-group">
+                                    <label>Imagen del Kit</label>
+                                    
+                                    <!-- DRAG & DROP ZONE -->
+                                    <div class="drop-zone" id="drop-zone-${safeName}" 
+                                         onclick="document.getElementById('file-input-${safeName}').click()"
+                                         ondragover="handleDragOver(event)" 
+                                         ondrop="handleDrop(event, '${safeName}')"
+                                         style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f8fafc;">
+                                        
+                                        <div id="preview-${safeName}" style="margin-bottom: 15px;">
+                                            ${catalogInfo.image ? `<img src="${catalogInfo.image}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">` : '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 40px; color: #94a3b8;"></i>'}
+                                        </div>
+                                        
+                                        <p style="color: #64748b; margin: 0; font-size: 14px;">
+                                            ${catalogInfo.image ? 'Clic o arrastra para cambiar' : 'Arrastra una imagen aquí o haz clic'}
+                                        </p>
+                                        <input type="file" id="file-input-${safeName}" accept="image/*" style="display: none;" onchange="handleFileSelect(event, '${safeName}')">
+                                        
+                                        <!-- Hidden URL input for compatibility/saving -->
+                                        <input type="hidden" id="catalog-img-${safeName}" value="${catalogInfo.image || ''}">
+                                        
+                                        <!-- Progress Bar -->
+                                        <div id="progress-${safeName}" style="width: 0%; height: 4px; background: #3b82f6; transition: width 0.3s; margin-top: 10px; display: none;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>Descripción para Clientes</label>
+                                    <textarea 
+                                        id="catalog-desc-${safeName}" 
+                                        rows="4" 
+                                        placeholder="Describe el kit para tus clientes..."
+                                        style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${catalogInfo.description || ''}</textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="form-group">
+                                    <label>Lo que Incluye (uno por línea)</label>
+                                    <textarea 
+                                        id="catalog-items-${safeName}" 
+                                        rows="8" 
+                                        placeholder="${defaultItems}"
+                                        style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${(catalogInfo.customItems || []).join('\n')}</textarea>
+                                    <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Si está vacío, se mostrará la lista automática</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="saveCatalogKit('${kitName}')" class="primary-btn" style="margin-top: 15px;">
+                            <i class="fa-solid fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- PEDIDOS PENDIENTES ---
+        function renderPendingOrders() {
+            const container = document.getElementById('pending-orders-list');
+            if (!container) return;
+
+            const orders = state.pendingOrders || [];
+
+            if (orders.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#94a3b8; padding:40px;">No hay pedidos pendientes.</p>';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => {
+                const date = new Date(order.timestamp).toLocaleString();
+                const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join('<br>');
+
+                return `
+                    <div class="tile" style="border-left: 5px solid #eab308; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <div>
+                                <span style="font-weight:bold; font-size:18px; display:block;">${order.customer}</span>
+                                <span style="color:#64748b; font-size:14px;"><i class="fa-brands fa-whatsapp"></i> ${order.phone || 'Sin télefono'}</span>
+                            </div>
+                            <span style="color:#64748b; font-size:12px;">${date}</span>
+                        </div>
+                        <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:15px; font-size:14px; color:#475569;">
+                            ${itemsList}
+                        </div>
+                        <div style="font-size:24px; font-weight:bold; margin-bottom:20px; text-align:right;">L ${order.total.toFixed(2)}</div>
+                        <div style="display:flex; gap:10px; justify-content:center;">
+                            <button onclick="confirmOrder('${order.id}')" class="primary-btn success" style="padding:10px; font-size:14px;">Confirmar Pago</button>
+                            <button onclick="rejectOrder('${order.id}')" class="primary-btn" style="background:#ef4444; padding:10px; font-size:14px;">Rechazar</button>
+                            ${order.phone ? `<a href="https://wa.me/504${order.phone.replace(/\D/g, '')}" target="_blank" class="primary-btn" style="background:#25D366; padding:10px; font-size:14px; text-decoration:none; display:flex; align-items:center;"><i class="fa-brands fa-whatsapp"></i></a>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function confirmOrder(orderId) {
+            if (!confirm("¿Confirmar que se recibió el pago? Esto registrará la venta.")) return;
+
+            const orderIndex = state.pendingOrders.findIndex(o => o.id === orderId);
+            if (orderIndex === -1) return;
+
+            const order = state.pendingOrders[orderIndex];
+
+            // Add to sales logic
+            state.sales = state.sales || [];
+
+            order.items.forEach(item => {
+                state.sales.push({
+                    date: new Date().toLocaleDateString(),
+                    type: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    profit: item.profit,
+                    items: { ...item.recipe }
+                });
+            });
+
+            state.totalProfit = (state.totalProfit || 0) + order.profit;
+
+            // Remove from pending
+            state.pendingOrders.splice(orderIndex, 1);
+
+            saveState();
+            alert("Pedido confirmado y venta registrada.");
+        }
+
+        function rejectOrder(orderId) {
+            if (!confirm("¿Rechazar pedido? El stock reservado será devuelto al inventario.")) return;
+
+            const orderIndex = state.pendingOrders.findIndex(o => o.id === orderId);
+            if (orderIndex === -1) return;
+
+            const order = state.pendingOrders[orderIndex];
+
+            // Restore Stock
+            order.items.forEach(item => {
+                for (let i = 0; i < item.quantity; i++) {
+                    for (const [mat, qty] of Object.entries(item.recipe)) {
+                        if (mat === 'price') continue;
+                        state.stock[mat] = (state.stock[mat] || 0) + qty;
+                    }
+                }
+            });
+
+            // Remove from pending
+            state.pendingOrders.splice(orderIndex, 1);
+
+            saveState();
+            alert("Pedido rechazado. Stock restaurado.");
+        }
+
+        // --- DRAG & DROP HANDLERS ---
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.style.borderColor = '#3b82f6';
+            e.currentTarget.style.backgroundColor = '#eff6ff';
+        }
+
+        function handleDrop(e, safeName) {
+            e.preventDefault();
+            e.stopPropagation();
+            const zone = document.getElementById(`drop-zone-${safeName}`);
+            zone.style.borderColor = '#cbd5e1';
+            zone.style.backgroundColor = '#f8fafc';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadImage(files[0], safeName);
+            }
+        }
+
+        function handleFileSelect(e, safeName) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadImage(files[0], safeName);
+            }
+        }
+
+        function uploadImage(file, safeName) {
+            // Check if Storage is available
+            if (typeof firebase === 'undefined' || !firebase.storage) {
+                alert("Error: Firebase Storage no está habilitado o cargado. Verifica tu conexión.");
+                return;
+            }
+
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${file.name}`);
+
+            const uploadTask = fileRef.put(file);
+            const progressBar = document.getElementById(`progress-${safeName}`);
+            const preview = document.getElementById(`preview-${safeName}`);
+
+            progressBar.style.display = 'block';
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressBar.style.width = progress + '%';
+                },
+                (error) => {
+                    console.error("Upload error:", error);
+                    alert("Error al subir la imagen: " + error.message);
+                    progressBar.style.display = 'none';
+                },
+                () => {
+                    // Upload completed successfully
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                        document.getElementById(`catalog-img-${safeName}`).value = downloadURL;
+                        preview.innerHTML = `<img src="${downloadURL}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+                        progressBar.style.display = 'none';
+                    });
+                }
+            );
+        }
+
+        async function saveCatalogKit(kitName) {
+            const safeKitName = kitName.replace(/\s+/g, '_');
+            const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
+            const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
+            const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
+            const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
+
+            state.catalogData = state.catalogData || {};
+            state.catalogData[kitName] = { image, description, customItems };
+
+            try {
+                await saveState();
+                alert(`✅ Cambios guardados para "${kitName}"`);
+            } catch (e) {
+                console.error(e);
+                alert('Error al guardar cambios');
+            }
+        }
+
         function updateUI() {
+            renderCatalogModule();
+            renderPendingOrders();
             // Update Inventory Grid
             const inventoryContainer = document.getElementById('inventory-container');
             if (inventoryContainer) {
@@ -1686,7 +2127,9 @@
             // Sync Purchase Dropdown
             updatePurchaseItems();
 
-            // Update Web Catalog\r}function updateAnalytics() {
+        }
+
+        function updateAnalytics() {
             // Calculate Totals for Sales Table
             const footer = document.getElementById('sales-footer');
             if (footer) {
@@ -1815,14 +2258,33 @@
             if (!table) return;
             const tbody = table.querySelector('tbody');
             if (!tbody) return;
-            tbody.innerHTML = data.slice(-5).reverse().map(entry => `
-                <tr>
-                    <td>${entry.date}</td>
-                    <td>${state.inventoryData[entry.item]?.name || entry.item || entry.type}</td>
-                    <td>${entry.qty || entry.price}</td>
-                    <td>${entry.cost || (entry.profit ? entry.profit.toFixed(2) : '0')}</td>
-                </tr>
-            `).join('');
+
+            tbody.innerHTML = data.slice(-10).reverse().map(entry => {
+                // Determine if it's a Sale or Purchase
+                const isSale = entry.type !== undefined; // Sales have 'type', Purchases have 'item'
+
+                if (isSale) {
+                    const qty = entry.quantity || 1;
+                    const totalSale = (entry.price * qty).toFixed(2);
+                    return `
+                        <tr>
+                            <td>${entry.date}</td>
+                            <td>${qty}x ${entry.type}</td>
+                            <td>L ${totalSale}</td>
+                            <td>L ${entry.profit.toFixed(2)}</td>
+                        </tr>
+                    `;
+                } else {
+                    return `
+                         <tr>
+                            <td>${entry.date}</td>
+                            <td>${state.inventoryData[entry.item]?.name || entry.item}</td>
+                            <td>${entry.qty}</td>
+                            <td>L ${entry.cost.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }
+            }).join('');
         }
 
         function updatePurchaseItems() {
@@ -1831,23 +2293,59 @@
             const currentVal = select.value;
             select.innerHTML = Object.entries(state.inventoryData).map(([id, data]) => `
                 <option value="${id}">${data.name} (${data.unit})</option>
-            `).join('');
-            if (state.inventoryData[currentVal]) select.value = currentVal;
+            `).join('') + `<option value="other">➕ Otros / Gastos Varios</option>`;
+            if (state.inventoryData[currentVal] || currentVal === 'other') select.value = currentVal;
         }
 
         /* --- FORMS --- */
         const purchaseForm = document.getElementById('purchase-form');
         if (purchaseForm) {
+            // Auto calculation listeners
+            const qtyInput = document.getElementById('purchase-qty');
+            const costInput = document.getElementById('purchase-unit-cost');
+
+            function calcTotalPurchase() {
+                const q = parseFloat(qtyInput.value) || 0;
+                const c = parseFloat(costInput.value) || 0;
+                // Use higher precision for display if decimals are present
+                document.getElementById('purchase-cost').value = (q * c).toFixed(2);
+            }
+
+            qtyInput.addEventListener('input', calcTotalPurchase);
+            costInput.addEventListener('input', calcTotalPurchase);
+
+            // Toggle custom input
+            document.getElementById('purchase-item').addEventListener('change', (e) => {
+                const isOther = e.target.value === 'other';
+                document.getElementById('custom-expense-group').style.display = isOther ? 'block' : 'none';
+                document.getElementById('custom-expense-desc').required = isOther;
+
+                // If "Other", quantity might not be relevant or is 1 unit
+                if (isOther) {
+                    document.getElementById('purchase-qty').value = 1;
+                    calcTotalPurchase();
+                }
+            });
+
             purchaseForm.onsubmit = (e) => {
                 e.preventDefault();
-                const item = document.getElementById('purchase-item').value;
+                const selectVal = document.getElementById('purchase-item').value;
                 const qty = parseFloat(document.getElementById('purchase-qty').value);
-                const cost = parseFloat(document.getElementById('purchase-cost').value);
+                const totalCost = parseFloat(document.getElementById('purchase-cost').value);
 
-                state.stock[item] = (state.stock[item] || 0) + qty;
-                state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost });
+                let item = selectVal;
+                if (selectVal === 'other') {
+                    item = document.getElementById('custom-expense-desc').value;
+                    // Do not update stock for custom expenses
+                } else {
+                    state.stock[item] = (state.stock[item] || 0) + qty;
+                }
+
+                state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost: totalCost });
                 saveState();
                 e.target.reset();
+                document.getElementById('custom-expense-group').style.display = 'none';
+                updatePurchaseItems(); // Reset select
             };
         }
 
@@ -1948,6 +2446,7 @@
                     date: new Date().toLocaleDateString(),
                     type,
                     price,
+                    quantity: 1, // Default quantity for now
                     profit: parseFloat(profit.toFixed(2)),
                     items: { ...recipe } // Guardamos copia de lo que se vendió
                 });
@@ -1971,26 +2470,28 @@
         function exportToCSV() {
             if (state.sales.length === 0) return alert('No hay ventas para exportar.');
 
-            const headers = ['Fecha', 'Kit', 'Precio', 'Ganancia', 'Fig. G', 'Fig. P', 'T. Roja', 'T. Ama', 'T. Azu', 'Pinceles', 'Paletas', 'Envases'];
-            const rows = state.sales.map(s => [
-                s.date,
-                s.type,
-                s.price,
-                s.profit,
-                s.items?.figura_g || 0,
-                s.items?.figura_p || 0,
-                s.items?.t_roja || 0,
-                s.items?.t_amarilla || 0,
-                s.items?.t_azul || 0,
-                s.items?.pinceles || 0,
-                s.items?.paletas || 0,
-                s.items?.envases || 0
-            ]);
+            const headers = ['Fecha', 'Cantidad', 'Kit', 'Precio Unit.', 'Total Venta', 'Ganancia Total', 'Fig. G', 'Fig. P', 'T. Roja', 'T. Ama', 'T. Azu', 'Pinceles', 'Paletas', 'Envases'];
+            const rows = state.sales.map(s => {
+                const qty = s.quantity || 1;
+                return [
+                    s.date,
+                    qty,
+                    s.type,
+                    s.price,
+                    (s.price * qty).toFixed(2),
+                    s.profit.toFixed(2),
+                    (s.items?.figura_g || 0) * qty,
+                    (s.items?.figura_p || 0) * qty,
+                    (s.items?.t_roja || 0) * qty,
+                    (s.items?.t_amarilla || 0) * qty,
+                    (s.items?.t_azul || 0) * qty,
+                    (s.items?.pinceles || 0) * qty,
+                    (s.items?.paletas || 0) * qty,
+                    (s.items?.envases || 0) * qty
+                ].join(',');
+            });
 
-            let csvContent = "data:text/csv;charset=utf-8,"
-                + headers.join(",") + "\n"
-                + rows.map(e => e.join(",")).join("\n");
-
+            const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
@@ -1999,6 +2500,7 @@
             link.click();
             document.body.removeChild(link);
         }
+
 
         function exportToPDF() {
             if (state.sales.length === 0) return alert('No hay ventas para exportar.');
@@ -2010,31 +2512,42 @@
             doc.text("Reporte Detallado de Ventas - YESOS Admin", 14, 20);
             doc.setFontSize(11);
             doc.text(`Fecha de Reporte: ${new Date().toLocaleDateString()}`, 14, 30);
-            doc.text(`Ganancia Total: L ${state.totalProfit.toFixed(2)}`, 14, 36);
+            doc.text(`Ganancia Total Acumulada: L ${state.totalProfit.toFixed(2)}`, 14, 36);
 
-            const headers = [['Fecha', 'Kit', 'Precio', 'Ganancia', 'F. G', 'F. P', 'Rojo', 'Amar', 'Azul', 'Pinc', 'Pale', 'Enva']];
-            const data = state.sales.map(s => [
-                s.date,
-                s.type.substring(0, 15),
-                s.price,
-                s.profit,
-                s.items?.figura_g || 0,
-                s.items?.figura_p || 0,
-                s.items?.t_roja || 0,
-                s.items?.t_amarilla || 0,
-                s.items?.t_azul || 0,
-                s.items?.pinceles || 0,
-                s.items?.paletas || 0,
-                s.items?.envases || 0
-            ]);
+            const headers = [['Fecha', 'Cant.', 'Kit', 'Total', 'Ganancia', 'F.G', 'F.P', 'Rojo', 'Amar', 'Azul', 'Pinc', 'Pale', 'Enva']];
+            const data = state.sales.map(s => {
+                const qty = s.quantity || 1;
+                return [
+                    s.date,
+                    qty,
+                    s.type.substring(0, 15),
+                    (s.price * qty).toFixed(2),
+                    s.profit.toFixed(2),
+                    ((s.items?.figura_g || 0) * qty).toFixed(0),
+                    ((s.items?.figura_p || 0) * qty).toFixed(0),
+                    ((s.items?.t_roja || 0) * qty).toFixed(1),
+                    ((s.items?.t_amarilla || 0) * qty).toFixed(1),
+                    ((s.items?.t_azul || 0) * qty).toFixed(1),
+                    ((s.items?.pinceles || 0) * qty).toFixed(0),
+                    ((s.items?.paletas || 0) * qty).toFixed(0),
+                    ((s.items?.envases || 0) * qty).toFixed(0)
+                ];
+            });
 
             doc.autoTable({
                 head: headers,
                 body: data,
                 startY: 45,
                 theme: 'grid',
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [30, 41, 59] }
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 41, 59], halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    1: { cellWidth: 10, halign: 'center' }, // Cant
+                    2: { cellWidth: 35 }, // Kit
+                    3: { cellWidth: 20, halign: 'right' }, // Total
+                    4: { cellWidth: 20, halign: 'right' }  // Ganancia
+                }
             });
 
             doc.save(`Reporte_Ventas_${new Date().toLocaleDateString()}.pdf`);
@@ -2057,14 +2570,129 @@
 
             const suggestedPrice = totalCost * 2.5;
 
-            document.getElementById('suggested-cost-display').innerText = `L ${totalCost.toFixed(2)}`;
-            document.getElementById('suggested-price-display').innerText = `L ${suggestedPrice.toFixed(0)}.00`;
+            // DOM Updates
+            const costDisplay = document.getElementById('suggested-cost-display');
+            const priceDisplay = document.getElementById('suggested-price-display');
+            if (costDisplay) costDisplay.innerText = `L ${totalCost.toFixed(2)}`;
+            if (priceDisplay) priceDisplay.innerText = `L ${suggestedPrice.toFixed(0)}.00`;
 
             const priceInput = document.getElementById('kit-price');
-            if (!priceInput.value || priceInput.value == "150") {
+            if (priceInput && (!priceInput.value || priceInput.value == "150")) {
                 priceInput.value = suggestedPrice.toFixed(0);
             }
         }
+
+        // --- DASHBOARD & EXPORTS (GLOBAL) ---
+        function openFinancialModal() { /* Deprecated */ }
+        function closeFinancialModal() { /* Deprecated */ }
+
+        function renderFinancialDashboard() {
+            // Calculate
+            const totalIncome = state.sales.reduce((acc, s) => acc + ((s.price * (s.quantity || 1)) || 0), 0);
+            const totalExpenses = state.purchases.reduce((acc, p) => acc + (p.cost || 0), 0);
+            const balance = totalIncome - totalExpenses;
+
+            // Render
+            const incEl = document.getElementById('dash-income');
+            const expEl = document.getElementById('dash-expenses');
+            const balEl = document.getElementById('dash-balance');
+            const msgEl = document.getElementById('dash-message');
+            const iconEl = document.getElementById('dash-status-icon');
+
+            if (incEl) incEl.textContent = `L ${totalIncome.toFixed(2)}`;
+            if (expEl) expEl.textContent = `L ${totalExpenses.toFixed(2)}`;
+            if (balEl) balEl.textContent = `L ${balance.toFixed(2)}`;
+
+            let margin = 0;
+            if (totalIncome > 0) margin = ((balance / totalIncome) * 100).toFixed(1);
+
+            const avgTicket = state.sales.length > 0 ? (totalIncome / state.sales.length).toFixed(2) : "0.00";
+
+            if (document.getElementById('dash-margin')) document.getElementById('dash-margin').textContent = `${margin}%`;
+            if (document.getElementById('dash-ticket')) document.getElementById('dash-ticket').textContent = `L ${avgTicket}`;
+
+            if (balance >= 0) {
+                if (balEl) balEl.style.color = '#059669'; // Green
+                if (msgEl) {
+                    msgEl.textContent = "Negocio Rentable";
+                    msgEl.style.color = '#059669';
+                }
+                if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-face-smile-wink" style="color: #10b981;"></i>';
+            } else {
+                if (balEl) balEl.style.color = '#dc2626'; // Red
+                if (msgEl) {
+                    msgEl.textContent = "Pérdida Operativa";
+                    msgEl.style.color = '#dc2626';
+                }
+                if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-face-frown-open" style="color: #ef4444;"></i>';
+            }
+        }
+
+        function exportPurchasesToCSV() {
+            if (state.purchases.length === 0) return alert('No hay compras para exportar.');
+
+            const headers = ['Fecha', 'Item', 'Cantidad', 'Costo Total'];
+            const rows = state.purchases.map(p => [
+                p.date,
+                state.inventoryData[p.item]?.name || p.item,
+                p.qty,
+                p.cost.toFixed(2)
+            ].join(','));
+
+            const csvContent = "data:text/csv;charset=utf-8," + headers.join(',') + "\n" + rows.join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Compras_Yesos_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportPurchasesToPDF() {
+            if (state.purchases.length === 0) return alert('No hay compras para exportar.');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text("Reporte de Compras - YESOS Admin", 14, 20);
+            doc.setFontSize(11);
+            doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 30);
+
+            const totalPurchases = state.purchases.reduce((acc, p) => acc + (p.cost || 0), 0);
+            doc.text(`Total Gastado: L ${totalPurchases.toFixed(2)}`, 14, 36);
+
+            const headers = [['Fecha', 'Ítem', 'Cant.', 'Costo']];
+            const data = state.purchases.map(p => [
+                p.date,
+                state.inventoryData[p.item]?.name || p.item,
+                p.qty,
+                `L ${p.cost.toFixed(2)}`
+            ]);
+
+            doc.autoTable({
+                head: headers,
+                body: data,
+                startY: 45,
+                theme: 'striped',
+                headStyles: { fillColor: [220, 38, 38] } // Red for expenses
+            });
+
+
+            doc.save(`Reporte_Compras_${new Date().toLocaleDateString()}.pdf`);
+        }
+
+        function clearPurchaseHistory() {
+            if (confirm('¿Estás seguro de que deseas borrar TODO el historial de compras? Esta acción no se puede deshacer.')) {
+                state.purchases = [];
+                saveState();
+                renderTable('purchase-history', state.purchases);
+                renderFinancialDashboard(); // Update dashboard stats if visible
+                alert('Historial de compras borrado.');
+            }
+        }
+
 
         // Listen for changes in Kit Form
         ['kit-figura-g', 'kit-figura-p', 'kit-roja', 'kit-amarilla', 'kit-azul', 'kit-pinceles', 'kit-paletas', 'kit-envases'].forEach(id => {
@@ -2116,6 +2744,11 @@
             const btn = document.getElementById(`btn-${mod}`);
             if (btn) btn.classList.add('active');
 
+            // If Financial Module, render stats
+            if (mod === 'financial') {
+                renderFinancialDashboard();
+            }
+
             // Auto-hide sidebar on mobile after selection
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
@@ -2125,19 +2758,40 @@
 
         const sideToggle = document.getElementById('sidebarToggle');
         if (sideToggle) {
-            sideToggle.onclick = () => {
-                const sidebar = document.getElementById('sidebar');
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.toggle('active');
-                } else {
-                    const isCollapsed = sidebar.classList.toggle('collapsed');
-                    const icon = sideToggle.querySelector('i');
-                    if (icon) {
-                        icon.className = isCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
-                    }
-                }
-            };
+            sideToggle.onclick = toggleMobileSidebar;
         }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOver');
+            const icon = document.getElementById('sidebarToggle').querySelector('i');
+
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+
+                // Toggle icon
+                if (sidebar.classList.contains('active')) {
+                    icon.className = 'fa-solid fa-times'; // Close icon
+                } else {
+                    icon.className = 'fa-solid fa-bars'; // Hamburger
+                }
+            } else {
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                icon.className = isCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
+            }
+        }
+
+        // Close sidebar when clicking a nav item on mobile
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    if (sidebar.classList.contains('active')) toggleMobileSidebar();
+                }
+            });
+        });
+
 
         /* --- INITIALIZATION --- */
         if (prevBtn) prevBtn.onclick = () => { if (currentSlide > 0) { currentSlide--; updateSlides(); } };
@@ -2152,14 +2806,26 @@
         updateSlides();
 
         // Robust Firebase SDK check
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKtBLWwgRgGtXeldzZZxqJQaiwZkQbB8k",
+            authDomain: "yesos-836cd.firebaseapp.com",
+            projectId: "yesos-836cd",
+            storageBucket: "yesos-836cd.firebasestorage.app",
+            messagingSenderId: "74266048840",
+            appId: "1:74266048840:web:206b5e646230b956de9b7d",
+            measurementId: "G-7N653JJ4PG"
+        };
+
         function checkFirebase() {
             if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 initFirebase();
             } else {
                 setTimeout(checkFirebase, 100);
             }
         }
         checkFirebase();
+
     </script>
 </body>
 

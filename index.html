@@ -10,19 +10,30 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
-    <!-- jsPDF for PDF generation -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- jsPDF-AutoTable for table generation in PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <!-- Firebase SDKs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
-    <!-- Chart.js for Analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-storage-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKtBLWwgRgGtXeldzZZxqJQaiwZkQbB8k",
+            authDomain: "yesos-836cd.firebaseapp.com",
+            projectId: "yesos-836cd",
+            storageBucket: "yesos-836cd.firebasestorage.app",
+            messagingSenderId: "74266048840",
+            appId: "1:74266048840:web:206b5e646230b956de9b7d",
+            measurementId: "G-7N653JJ4PG"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* CORE SETUP */
+        /* ESTILOS (Originales + Catálogo) */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -36,16 +47,16 @@
             --bg-light: #f1f5f9;
             --text-main: #1e293b;
             --slide-bg: #ffffff;
-            --transition-speed: 0.5s;
         }
 
-        /* DASHBOARD & SIDEBAR STYLES */
         body {
             display: flex;
             background-color: #f1f5f9;
             overflow: hidden;
+            font-family: 'Inter', sans-serif;
         }
 
+        /* Sidebar */
         .sidebar {
             width: 280px;
             background-color: #1e293b;
@@ -99,6 +110,8 @@
             text-align: left;
             font-size: 16px;
             transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         .nav-item:hover,
@@ -117,11 +130,6 @@
             justify-content: center;
         }
 
-        .sidebar.collapsed .nav-item i {
-            margin: 0;
-            font-size: 1.2rem;
-        }
-
         .nav-separator {
             padding: 20px 30px 10px;
             font-size: 12px;
@@ -132,27 +140,6 @@
 
         .sidebar.collapsed .nav-separator {
             display: none;
-        }
-
-        .sidebar.collapsed {
-            overflow: hidden;
-        }
-
-        .nav-item {
-            width: 100%;
-            padding: 15px 30px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            color: #94a3b8;
-            background: none;
-            border: none;
-            cursor: pointer;
-            text-align: left;
-            font-size: 16px;
-            transition: all 0.2s;
-            white-space: nowrap;
-            overflow: hidden;
         }
 
         .sidebar-toggle {
@@ -173,13 +160,13 @@
             border: 2px solid #1e293b;
         }
 
+        /* Main Content */
         .main-content {
             flex-grow: 1;
             height: 100vh;
             overflow-y: auto;
             position: relative;
             background-color: #0f172a;
-            /* Default to presentation bg */
             transition: background 0.3s;
         }
 
@@ -193,13 +180,12 @@
             display: block;
         }
 
-        /* Admin Specific Styles */
         #admin-mode {
             background-color: #f1f5f9;
             padding: 40px;
         }
 
-        /* Inventory Cards */
+        /* Components */
         .inventory-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -216,15 +202,8 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
             border: 1px solid #e2e8f0;
-        }
-
-        .inventory-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
-            border-color: var(--highlight);
+            position: relative;
         }
 
         .card-img {
@@ -240,131 +219,8 @@
             color: var(--highlight);
             overflow: hidden;
             border: 1px solid #f1f5f9;
-            transition: transform 0.3s;
             background-size: cover;
             background-position: center;
-        }
-
-        /* --- MOBILE RESPONSIVENESS --- */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                top: 0;
-                width: 280px;
-                height: 100vh;
-                box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
-                transition: left 0.3s ease;
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .sidebar-toggle {
-                right: -35px;
-                top: 25px;
-                width: 40px;
-                height: 40px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-            }
-
-            #admin-mode {
-                padding: 20px 15px;
-            }
-
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .inventory-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-                gap: 15px;
-            }
-
-            .inventory-card {
-                padding: 15px;
-            }
-
-            .card-img {
-                width: 70px;
-                height: 70px;
-                font-size: 28px;
-            }
-
-            .financial-table-wrapper {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                margin-top: 15px;
-                border-radius: 8px;
-                border: 1px solid #e2e8f0;
-            }
-
-            .financial-table {
-                min-width: 600px;
-                /* Force scroll on small screens */
-                margin-top: 0;
-            }
-
-            .modal-content {
-                width: 95% !important;
-                padding: 20px !important;
-            }
-
-            /* Better touch targets for controls */
-            .control-btn {
-                width: 35px;
-                height: 35px;
-                font-size: 18px;
-            }
-
-            .card-qty {
-                font-size: 1.2rem;
-            }
-        }
-
-        .inventory-card:hover .card-img {
-            transform: scale(1.1) rotate(5deg);
-        }
-
-        .card-img.color-red {
-            color: #ef4444;
-            background: #fef2f2;
-        }
-
-        .card-img.color-yellow {
-            color: #facc15;
-            background: #fffbeb;
-        }
-
-        .card-img.color-blue {
-            color: #3b82f6;
-            background: #eff6ff;
-        }
-
-        .card-img.color-green {
-            color: #10b981;
-            background: #ecfdf5;
-        }
-
-        .card-img.color-purple {
-            color: #8b5cf6;
-            background: #f5f3ff;
-        }
-
-        .card-img.color-pink {
-            color: #ec4899;
-            background: #fdf2f8;
-        }
-
-        .card-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
 
         .card-title {
@@ -376,119 +232,36 @@
             margin-bottom: 8px;
         }
 
-        .card-qty-wrapper {
-            margin-bottom: 20px;
-        }
-
         .card-qty {
             font-size: 26px;
             font-weight: 900;
             color: #0f172a;
         }
 
-        .card-unit {
-            font-size: 12px;
-            color: #94a3b8;
-            font-weight: 600;
-        }
-
         .card-controls {
             display: flex;
             gap: 12px;
             width: 100%;
+            margin-top: 15px;
         }
 
         .control-btn {
             flex: 1;
-            padding: 12px;
+            padding: 8px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 18px;
             font-weight: 700;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .control-btn.minus {
-            background-color: #f1f5f9;
+            background: #f1f5f9;
             color: #64748b;
         }
 
         .control-btn.plus {
-            background-color: var(--highlight);
+            background: var(--highlight);
             color: white;
-        }
-
-        .control-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.05);
-        }
-
-        .card-actions {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .inventory-card:hover .card-actions {
-            opacity: 1;
-        }
-
-        .action-btn {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            transition: transform 0.2s;
-        }
-
-        .action-btn.edit {
-            background: #e0f2fe;
-            color: #0284c7;
-        }
-
-        .action-btn.delete {
-            background: #fef2f2;
-            color: #ef4444;
-        }
-
-        .action-btn:hover {
-            transform: scale(1.2);
-        }
-
-        .add-product-btn {
-            background-color: white;
-            border: 3px dashed #cbd5e1;
-            color: #94a3b8;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            min-height: 250px;
-        }
-
-        .add-product-btn:hover {
-            border-color: var(--highlight);
-            color: var(--highlight);
-            background: #f0f9ff;
-        }
-
-        .admin-container {
-            max-width: 1200px;
-            margin: 0 auto;
         }
 
         .admin-module {
@@ -507,43 +280,22 @@
             margin-top: 30px;
         }
 
-        .item-list {
-            text-align: left;
-            margin-top: 20px;
-        }
-
-        .stock-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .stock-item.low {
-            color: #ef4444;
-            font-weight: 700;
-        }
-
-        .admin-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            text-align: left;
-        }
-
         .form-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             font-weight: 600;
             color: #475569;
+            font-size: 14px;
         }
 
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             padding: 12px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
@@ -558,212 +310,19 @@
             border-radius: 8px;
             font-weight: 700;
             cursor: pointer;
-            transition: opacity 0.2s;
+            width: 100%;
         }
 
         .primary-btn.success {
             background-color: #22c55e;
         }
 
-        .primary-btn:hover {
-            opacity: 0.9;
-        }
-
-        .mt-4 {
-            margin-top: 30px;
-        }
-
-        .mt-2 {
-            margin-top: 10px;
-        }
-
-        .text-small {
-            font-size: 14px;
-            color: #64748b;
-        }
-
-        /* Animation from before */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ORIGINAL PRESENTATION STYLES (Kept & Scoped) */
-        .presentation-wrapper {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .slide-container {
-            background-color: var(--slide-bg);
-            display: none;
-            flex-direction: column;
-            height: 100vh;
-            width: 100vw;
-            padding: 40px 5%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            overflow-y: auto;
-        }
-
-        .slide-container.active {
-            display: flex;
-        }
-
-        @media (min-width: 1024px) {
-            .slide-container {
-                padding: 60px 80px;
-                height: clamp(600px, 92vh, 850px);
-                width: clamp(800px, 94vw, 1350px);
-                border-radius: 12px;
-                position: relative;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            }
-        }
-
-        /* TIPOGRAFÍA */
-        h1,
-        h2,
-        h3 {
-            color: var(--primary);
-            margin: 0;
-        }
-
-        h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: clamp(32px, 8vw, 58px);
-            line-height: 1.1;
-            margin-bottom: 20px;
-            color: #1e293b;
-        }
-
-        .slide-title {
-            font-family: 'Inter', sans-serif;
-            font-size: clamp(24px, 5vw, 38px);
-            font-weight: 700;
-            margin-bottom: 30px;
-            border-left: 6px solid var(--highlight);
-            padding-left: 20px;
-            color: #1e293b;
-        }
-
-        p,
-        li,
-        td,
-        th {
-            font-size: clamp(16px, 2vw, 20px);
-            line-height: 1.6;
-            color: var(--text-main);
-        }
-
-        /* LAYOUTS */
-        .content-area {
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            justify-content: center;
-            width: 100%;
-        }
-
-        .two-column {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-            align-items: center;
-        }
-
-        @media (min-width: 768px) {
-            .two-column {
-                grid-template-columns: 1fr 1fr;
-                gap: 60px;
-            }
-        }
-
-        .three-column {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 768px) {
-            .three-column {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 30px;
-            }
-        }
-
-        /* CONTROLS */
-        .controls {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            display: flex;
-            gap: 15px;
-            z-index: 1000;
-        }
-
-        .control-btn {
-            background: rgba(30, 41, 59, 0.8);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(4px);
-        }
-
-        .control-btn:hover {
-            background: var(--highlight);
-            transform: scale(1.1);
-        }
-
-        .progress-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            height: 6px;
-            background: var(--highlight);
-            transition: width 0.3s ease;
-            z-index: 1001;
-        }
-
-        /* Rest of the original specialized styles */
-        .bullet-list ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .bullet-list li {
-            margin-bottom: 15px;
-            padding-left: 35px;
-            position: relative;
-        }
-
-        .bullet-list li::before {
-            content: "\f00c";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            position: absolute;
-            left: 0;
-            color: var(--highlight);
+        .tile {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
         }
 
         .financial-table {
@@ -779,14 +338,7 @@
         .financial-table td {
             padding: 12px;
             border-bottom: 1px solid #e2e8f0;
-        }
-
-        @media (min-width: 768px) {
-
-            .financial-table th,
-            .financial-table td {
-                padding: 18px;
-            }
+            text-align: left;
         }
 
         .financial-table th {
@@ -796,527 +348,244 @@
             text-transform: uppercase;
         }
 
-        .financial-table tr:last-child td {
+        /* Debug Console en pantalla */
+        #debug-console {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: lime;
+            padding: 5px 10px;
+            font-family: monospace;
+            font-size: 10px;
+            z-index: 9999;
+            max-width: 300px;
+            pointer-events: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                width: 280px;
+                height: 100vh;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            #admin-mode {
+                padding: 20px;
+            }
+        }
+
+        /* Estilos Slide Presentación */
+        .slide-container {
+            background-color: #fff;
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            padding: 40px 5%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+        }
+
+        .slide-container.active {
+            display: flex;
+        }
+
+        .slide-title {
+            font-size: 32px;
             font-weight: 700;
-            background-color: #f0f9ff;
-            border-top: 2px solid var(--highlight);
-        }
-
-        .changed-value {
-            color: #2563eb;
-            font-weight: 700;
-            background-color: #dbeafe;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
-        .tile {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e2e8f0;
-            text-align: center;
-        }
-
-        .tile.highlight {
-            border: 2px solid var(--highlight);
-            background: #eff6ff;
+            margin-bottom: 30px;
+            border-left: 6px solid var(--highlight);
+            padding-left: 20px;
+            color: #1e293b;
         }
 
         .big-number {
-            font-size: clamp(32px, 5vw, 48px);
+            font-size: 48px;
             font-weight: 700;
             color: var(--highlight);
-            margin: 10px 0;
-        }
-
-        .img-box {
-            width: 100%;
-            height: clamp(200px, 30vh, 350px);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-
-        .img-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .recipe-card {
-            background-color: #fffbeb;
-            border-left: 5px solid #fbbf24;
-            padding: 20px;
-            margin-bottom: 20px;
         }
     </style>
 </head>
 
 <body>
-    <!-- Sidebar for Navigation between Modes -->
+    <div id="debug-console">Iniciando...</div>
+
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i class="fa-solid fa-gem"></i>
-            <span>YESOS Admin</span>
+            <i class="fa-solid fa-gem"></i><span>YESOS Admin</span>
         </div>
         <nav>
-            <button class="nav-item active" onclick="switchMode('presentation')">
-                <i class="fa-solid fa-desktop"></i> <span>Presentación</span>
-            </button>
-            <a href="ventas.html" class="nav-item" id="btn-ventas" style="text-decoration:none;">
-                <i class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span>
-            </a>
+            <button class="nav-item active" onclick="switchMode('presentation')"><i class="fa-solid fa-desktop"></i>
+                <span>Presentación</span></button>
+            <a href="ventas.html" class="nav-item" style="text-decoration:none;"><i
+                    class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span></a>
             <div class="nav-separator">GESTIÓN</div>
-            <button class="nav-item" onclick="showModule('stock')" id="btn-stock">
-                <i class="fa-solid fa-boxes-stacked"></i> <span>Inventario</span>
-            </button>
-            <button class="nav-item" onclick="showModule('kits')" id="btn-kits">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Mis Kits</span>
-            </button>
-            <button class="nav-item" onclick="showModule('purchases')" id="btn-purchases">
-                <i class="fa-solid fa-cart-shopping"></i> <span>Compras</span>
-            </button>
-            <button class="nav-item" onclick="showModule('sales')" id="btn-sales">
-                <i class="fa-solid fa-file-invoice-dollar"></i> <span>Ventas/Facturas</span>
-            </button>
-            <button class="nav-item" onclick="showModule('catalog')" id="btn-catalog">
-                <i class="fa-solid fa-store"></i> <span>Catálogo Web</span>
-            </button>
+            <button class="nav-item" onclick="showModule('stock')" id="btn-stock"><i
+                    class="fa-solid fa-boxes-stacked"></i> <span>Inventario</span></button>
+            <button class="nav-item" onclick="showModule('kits')" id="btn-kits"><i
+                    class="fa-solid fa-wand-magic-sparkles"></i> <span>Mis Kits</span></button>
+            <button class="nav-item" onclick="showModule('catalog')" id="btn-catalog"><i class="fa-solid fa-store"></i>
+                <span>Catálogo Web</span></button>
+            <button class="nav-item" onclick="showModule('purchases')" id="btn-purchases"><i
+                    class="fa-solid fa-cart-shopping"></i> <span>Compras</span></button>
+            <button class="nav-item" onclick="showModule('orders')" id="btn-orders"><i
+                    class="fa-solid fa-clipboard-check"></i> <span>Pedidos</span></button>
+            <button class="nav-item" onclick="showModule('sales')" id="btn-sales"><i
+                    class="fa-solid fa-file-invoice-dollar"></i> <span>Ventas/Facturas</span></button>
 
             <div
                 style="margin-top:auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #94a3b8;">
                 <div id="sync-status" style="display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-circle" style="color: #64748b;"></i>
-                    <span>Estado: Conectando...</span>
+                    <i class="fa-solid fa-circle" style="color: #64748b;"></i><span>Estado: Conectando...</span>
                 </div>
             </div>
         </nav>
-        <div class="sidebar-toggle" id="sidebarToggle">
-            <i class="fa-solid fa-chevron-left"></i>
-        </div>
+        <div class="sidebar-toggle" id="sidebarToggle"><i class="fa-solid fa-chevron-left"></i></div>
     </div>
 
-    <!-- Main Content Wrapper -->
     <div class="main-content" id="mainContent">
-
-        <!-- MODE: PRESENTATION -->
         <div id="presentation-mode" class="mode-view active">
-            <div class="presentation-wrapper">
-                <div class="progress-bar" id="progressBar"></div>
-                <div class="controls">
-                    <button class="control-btn" id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
-                    <button class="control-btn" id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="slide-container active"
+                style="justify-content:center; align-items:center; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color:white;">
+                <div style="text-align: center;">
+                    <i class="fa-solid fa-paintbrush" style="font-size: 60px; color: #60a5fa; margin-bottom: 20px;"></i>
+                    <h1 style="color:white; margin-bottom:20px;">Kits de Yeso</h1>
+                    <p style="color:#94a3b8; font-size:24px;">Panel de Administración y Ventas</p>
                 </div>
+            </div>
+        </div>
 
-
-                <!-- Slide 1: Portada -->
-                <div class="slide-container"
-                    style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); justify-content: center;">
-                    <div style="text-align: center; color: white;">
-                        <i class="fa-solid fa-paintbrush"
-                            style="font-size: 60px; color: #60a5fa; margin-bottom: 20px;"></i>
-                        <h1 style="color: white; margin-bottom: 20px;">Plan de Negocio:<br>Kits de Yeso + Pintura</h1>
-                        <p style="color: #94a3b8; font-size: 24px;">Análisis de Costos y Producción 2025</p>
-                        <div
-                            style="margin-top: 50px; padding: 15px 30px; background: rgba(255,255,255,0.1); border-radius: 50px; display: inline-block;">
-                            <span style="color: #60a5fa; font-weight: 700;">ACTUALIZADO:</span> Mano de Obra reducida a
-                            L 30.00
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 2: La Receta Base -->
-                <div class="slide-container">
-                    <h2 class="slide-title">1. La Receta del Lote</h2>
-                    <div class="content-area">
-                        <div class="two-column">
-                            <div>
-                                <p class="mb-4">Para un lote estándar de producción (Rendimiento: 400g mezcla húmeda).
-                                </p>
-                                <div class="recipe-card">
-                                    <h3 style="font-size: 24px; margin-bottom: 15px; color: #92400e;">Ingredientes</h3>
-                                    <ul style="list-style: none; padding: 0;">
-                                        <li style="margin-bottom: 10px; font-weight: 600;">• 200g Yeso</li>
-                                        <li style="margin-bottom: 10px; font-weight: 600;">• 100g Cemento Blanco</li>
-                                        <li style="margin-bottom: 10px; font-weight: 600;">• 100g Agua</li>
-                                    </ul>
-                                </div>
-                                <p style="font-size: 18px; color: #64748b;"><strong>Produce:</strong> 4 Figuras Grandes
-                                    + 3
-                                    Pequeñas
-                                    (7 Total)</p>
-                            </div>
-                            <div class="img-box">
-                                <img src="https://artsyprettyplants.com/wp-content/uploads/2024/03/Water-to-Cement-Ratio-3-450x900.jpg"
-                                    alt="Mezcla de cemento y yeso">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 3: Proceso -->
-                <div class="slide-container">
-                    <h2 class="slide-title">2. Proceso de Fabricación</h2>
-                    <div class="content-area">
-                        <div class="three-column" style="text-align: center;">
-                            <div class="tile">
-                                <i class="fa-solid fa-blender"
-                                    style="font-size: 40px; color: #475569; margin-bottom: 20px;"></i>
-                                <h3>1. Mezcla</h3>
-                                <p style="font-size: 16px;">Integrar polvos en seco, luego añadir agua gradualmente.</p>
-                            </div>
-                            <div class="tile">
-                                <i class="fa-solid fa-sun"
-                                    style="font-size: 40px; color: #eab308; margin-bottom: 20px;"></i>
-                                <h3>2. Secado</h3>
-                                <p style="font-size: 16px;">1 día completo al sol para eliminar humedad inicial.</p>
-                            </div>
-                            <div class="tile">
-                                <i class="fa-solid fa-fire-burner"
-                                    style="font-size: 40px; color: #ef4444; margin-bottom: 20px;"></i>
-                                <h3>3. Horneado</h3>
-                                <p style="font-size: 16px;">AirFryer: 15 min a 120°C para dureza tipo cerámica.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 4: Costos del Lote (ACTUALIZADO) -->
-                <div class="slide-container">
-                    <h2 class="slide-title">3. Costo Real del Lote</h2>
-                    <div class="content-area">
-                        <p>Costo para producir 7 figuras (4 grandes, 3 pequeñas)</p>
-                        <table class="financial-table">
-                            <thead>
-                                <tr>
-                                    <th>Concepto</th>
-                                    <th>Detalle</th>
-                                    <th style="text-align: right;">Costo Lote (L)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Materia Prima</td>
-                                    <td>Yeso (L9.91) + Cemento (L6.17)</td>
-                                    <td style="text-align: right;">16.08</td>
-                                </tr>
-                                <tr style="background-color: #eff6ff;">
-                                    <td><strong>Mano de Obra</strong></td>
-                                    <td><strong>Ajustado según solicitud</strong></td>
-                                    <td style="text-align: right;"><span class="changed-value">30.00</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Electricidad/Molde</td>
-                                    <td>AirFryer + Depreciación</td>
-                                    <td style="text-align: right;">6.00</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>COSTO TOTAL</strong></td>
-                                    <td colspan="2"><strong>Nuevo costo del lote</strong></td>
-                                    <td style="text-align: right; font-size: 24px;"><strong>52.08</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <p style="margin-top: 15px; font-size: 16px; color: #64748b;">*Antes el lote costaba L 102.08.
-                            ¡Reducción
-                            del 49%!</p>
-                    </div>
-                </div>
-
-                <!-- Slide 5: Costo Unitario (RECALCULADO) -->
-                <div class="slide-container">
-                    <h2 class="slide-title">4. Nuevos Costos Unitarios</h2>
-                    <div class="content-area">
-                        <div class="two-column">
-                            <div class="tile highlight">
-                                <i class="fa-solid fa-star" style="color: #eab308; font-size: 30px;"></i>
-                                <h3>Figura GRANDE</h3>
-                                <p style="font-size: 16px; margin-bottom: 5px;">Costo de Producción</p>
-                                <div class="big-number">L 10.42</div>
-                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L 20.40
-                                </p>
-                            </div>
-                            <div class="tile">
-                                <i class="fa-regular fa-star" style="color: #64748b; font-size: 30px;"></i>
-                                <h3>Figura PEQUEÑA</h3>
-                                <p style="font-size: 16px; margin-bottom: 5px;">Costo de Producción</p>
-                                <div class="big-number" style="color: #475569;">L 3.47</div>
-                                <p style="font-size: 14px; text-decoration: line-through; color: #94a3b8;">Antes L 6.80
-                                </p>
-                            </div>
-                        </div>
-                        <p style="text-align: center; margin-top: 30px;">Cálculo basado en distribución de material y
-                            tiempo del
-                            lote de L 52.08.</p>
-                    </div>
-                </div>
-
-                <!-- Slide 6: Agregados (Accesorios) -->
-                <div class="slide-container">
-                    <h2 class="slide-title">5. Costo de Accesorios (Kit)</h2>
-                    <div class="content-area">
-                        <div class="two-column">
-                            <div>
-                                <ul class="bullet-list">
-                                    <li><strong>Herramientas (L 8.00):</strong> Pincel básico + Paleta mezcladora.</li>
-                                    <li><strong>Envases (L 8.00):</strong> 3 Botes vacíos para pintura.</li>
-                                    <li><strong>Pintura (L 7.83):</strong> 15ml de pintura acrílica (3 colores).</li>
-                                </ul>
-                            </div>
-                            <div class="tile" style="background: #f8fafc;">
-                                <h3>Total Accesorios</h3>
-                                <div class="big-number" style="color: #334155;">L 23.83</div>
-                                <p>Costo fijo por Kit vendido</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 7: Análisis SUPER KIT (RECALCULADO) -->
-                <div class="slide-container">
-                    <h2 class="slide-title">6. Costo Total "Súper Kit"</h2>
-                    <div class="content-area">
-                        <p style="margin-bottom: 15px;">Configuración: 2 Figuras Grandes + 1 Pequeña + Accesorios</p>
-                        <table class="financial-table">
-                            <thead>
-                                <tr>
-                                    <th>Ítem</th>
-                                    <th>Cantidad</th>
-                                    <th>Unitario (L)</th>
-                                    <th style="text-align: right;">Subtotal (L)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Figura Grande</td>
-                                    <td>2</td>
-                                    <td>10.42</td>
-                                    <td style="text-align: right;">20.84</td>
-                                </tr>
-                                <tr>
-                                    <td>Figura Pequeña</td>
-                                    <td>1</td>
-                                    <td>3.47</td>
-                                    <td style="text-align: right;">3.47</td>
-                                </tr>
-                                <tr>
-                                    <td>Kit Accesorios</td>
-                                    <td>1</td>
-                                    <td>23.83</td>
-                                    <td style="text-align: right;">23.83</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>COSTO TOTAL</strong></td>
-                                    <td colspan="2"><strong>Producción Final</strong></td>
-                                    <td style="text-align: right;"><span class="changed-value"
-                                            style="font-size: 28px;">48.14</span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Slide 8: Precio y Ganancia -->
-                <div class="slide-container">
-                    <h2 class="slide-title">7. Precio Sugerido</h2>
-                    <div class="content-area">
-                        <div class="three-column">
-                            <div class="tile">
-                                <h3 style="color: #ef4444;">Costo</h3>
-                                <div class="big-number" style="color: #ef4444; font-size: 36px;">L 48.14</div>
-                                <p style="font-size: 14px;">Producción completa</p>
-                            </div>
-                            <div class="tile highlight">
-                                <h3 style="color: #2563eb;">Precio Venta</h3>
-                                <div class="big-number">L 150.00</div>
-                                <p style="font-size: 14px;">Recomendado</p>
-                            </div>
-                            <div class="tile" style="background: #ecfccb; border: 1px solid #84cc16;">
-                                <h3 style="color: #65a30d;">Ganancia</h3>
-                                <div class="big-number" style="color: #65a30d;">L 101.86</div>
-                                <p style="font-size: 14px; font-weight: 700;">Margen: 211%</p>
-                            </div>
-                        </div>
-                        <p style="text-align: center; margin-top: 30px; color: #64748b;">
-                            Al reducir la mano de obra, tu ganancia por kit sube de L78 a más de L100.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Slide 9: Rentabilidad -->
-                <div class="slide-container">
-                    <h2 class="slide-title">8. Rentabilidad</h2>
-                    <div class="content-area">
-                        <div class="two-column">
-                            <div class="img-box">
-                                <img src="https://img.freepik.com/premium-photo/minimal-abstraction-with-geometric-shapes-square-circle-plaster-concrete-abstract-background-scene-demonstration-cosmetic-products_350573-502.jpg"
-                                    alt="Figuras geométricas yeso">
-                            </div>
-                            <div style="padding-left: 20px;">
-                                <h3 style="margin-bottom: 20px; font-size: 32px;">Alta Rentabilidad</h3>
-                                <p>Con el nuevo ajuste de costos:</p>
-                                <ul class="bullet-list" style="margin-top: 20px;">
-                                    <li>Vendes a <strong>L 150.00</strong>.</li>
-                                    <li>Cubres todos los materiales y tu pago de L30 por lote.</li>
-                                    <li>Te quedan <strong>L 101.86 libres</strong> para reinvertir o ahorrar.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slide 10: Conclusión -->
-                <div class="slide-container" style="background-color: #f8fafc; text-align: center;">
-                    <div class="content-area" style="align-items: center;">
-                        <i class="fa-solid fa-check-circle"
-                            style="font-size: 80px; color: #22c55e; margin-bottom: 30px;"></i>
-                        <h2 style="font-size: 48px; margin-bottom: 20px;">Plan Actualizado</h2>
-                        <p style="max-width: 800px; margin-bottom: 40px;">
-                            Reducir el costo asignado a la mano de obra ha disparado el margen de ganancia potencial por
-                            encima
-                            del
-                            200%, haciendo este modelo de negocio extremadamente atractivo.
-                        </p>
-                        <div
-                            style="background: white; padding: 20px 60px; border-radius: 100px; border: 1px solid #e2e8f0; box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
-                            <span style="font-weight: 700; color: #475569; margin-right: 20px;">COSTO KIT: L
-                                48.14</span>
-                            <span style="color: #cbd5e1;">|</span>
-                            <span style="font-weight: 700; color: #2563eb; margin-left: 20px;">GANANCIA: L 101.86</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div> <!-- End presentation-wrapper -->
-        </div> <!-- End presentation-mode -->
-
-        <!-- MODE: ADMIN -->
         <div id="admin-mode" class="mode-view">
             <div class="admin-container">
-                <!-- Stock Module -->
+
                 <div id="stock-module" class="admin-module active">
                     <div
-                        style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;">
-                        <div>
-                            <h2 class="slide-title" style="margin-bottom: 10px;">Inventario Real</h2>
-                            <p style="color: #64748b;">Gestiona tus materias primas y productos finalizados.</p>
-                        </div>
-                        <button class="primary-btn" onclick="toggleNewProductForm()" style="padding: 12px 25px;">
-                            <i class="fa-solid fa-plus"></i> Nuevo Producto
-                        </button>
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                        <h2 class="slide-title" style="margin:0;">Inventario</h2>
+                        <button class="primary-btn" onclick="toggleNewProductForm()"
+                            style="width:auto; padding:10px 20px;"><i class="fa-solid fa-plus"></i> Nuevo</button>
                     </div>
 
-                    <!-- Hidden Form for New Product -->
                     <div id="new-product-modal" class="tile"
-                        style="display: none; margin-bottom: 40px; border: 2px solid var(--highlight);">
-                        <h3 style="margin-bottom: 20px;">Agregar Nuevo Producto al Catálogo</h3>
-                        <form id="new-product-form" class="admin-form">
+                        style="display: none; margin-bottom: 30px; border: 2px solid var(--highlight);">
+                        <h3>Gestionar Producto</h3>
+                        <form id="new-product-form">
                             <input type="hidden" id="edit-prod-id">
                             <div class="dashboard-grid"
-                                style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 0;">
-                                <div class="form-group">
-                                    <label>Nombre del Producto</label>
-                                    <input type="text" id="new-prod-name" placeholder="Ej: FIGURA CABALLO" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Unidad</label>
-                                    <select id="new-prod-unit">
-                                        <option value="kg">Kilogramos (kg)</option>
-                                        <option value="ml">Mililitros (ml)</option>
-                                        <option value="uds">Unidades (uds)</option>
-                                        <option value="lb">Libras (lb)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Stock Inicial</label>
-                                    <input type="number" id="new-prod-qty" value="0" step="0.01">
-                                </div>
-                                <div class="form-group">
-                                    <label>Categoría (Validación)</label>
-                                    <select id="new-prod-category">
-                                        <option value="general">Materia Prima / General</option>
-                                        <option value="figura_g">Figura GRANDE</option>
-                                        <option value="figura_p">Figura PEQUEÑA</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Imagen Personalizada (URL)</label>
-                                    <input type="text" id="new-prod-img" placeholder="https://ejemplo.com/foto.jpg">
-                                </div>
-                                <div class="form-group">
-                                    <label>Ícono (Si no hay imagen)</label>
-                                    <select id="new-prod-icon">
-                                        <option value="fa-shapes">Figura / Forma</option>
-                                        <option value="fa-cube">Cubo / Polvo</option>
-                                        <option value="fa-droplet">Líquido</option>
-                                        <option value="fa-fill-drip">Pintura</option>
-                                        <option value="fa-hammer">Herramienta</option>
-                                        <option value="fa-box-open">Envases</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color del Ícono</label>
-                                    <select id="new-prod-color">
-                                        <option value="blue">Azul (Estándar)</option>
-                                        <option value="red">Rojo</option>
-                                        <option value="yellow">Amarillo</option>
-                                        <option value="green">Verde</option>
-                                        <option value="purple">Morado</option>
-                                        <option value="pink">Rosa</option>
-                                    </select>
-                                </div>
+                                style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top:15px;">
+                                <div class="form-group"><label>Nombre</label><input type="text" id="new-prod-name"
+                                        required></div>
+                                <div class="form-group"><label>Unidad</label><select id="new-prod-unit">
+                                        <option value="kg">kg</option>
+                                        <option value="ml">ml</option>
+                                        <option value="uds">uds</option>
+                                    </select></div>
+                                <div class="form-group"><label>Stock</label><input type="number" id="new-prod-qty"
+                                        step="0.01" value="0"></div>
+                                <div class="form-group"><label>Categoría</label><select id="new-prod-category">
+                                        <option value="general">Materia Prima</option>
+                                        <option value="figura_g">Figura G</option>
+                                        <option value="figura_p">Figura P</option>
+                                    </select></div>
                             </div>
-                            <div style="display: flex; gap: 15px; margin-top: 20px;">
-                                <button type="submit" class="primary-btn" style="flex: 2;">Confirmar y Guardar</button>
-                                <button type="button" class="primary-btn" style="flex: 1; background-color: #ef4444;"
+                            <div style="display:flex; gap:10px; margin-top:20px;">
+                                <button type="submit" class="primary-btn">Guardar</button>
+                                <button type="button" class="primary-btn" style="background:#ef4444;"
                                     onclick="toggleNewProductForm()">Cancelar</button>
                             </div>
                         </form>
                     </div>
+                    <div class="inventory-grid" id="inventory-container"></div>
+                </div>
 
-                    <div class="inventory-grid" id="inventory-container">
-                        <!-- Cards will be rendered here via JS -->
+                <div id="kits-module" class="admin-module">
+                    <h2 class="slide-title">Mis Kits</h2>
+                    <div class="dashboard-grid">
+                        <div class="tile">
+                            <h3>Crear / Editar Kit</h3>
+                            <form id="kit-config-form">
+                                <div class="form-group"><label>Nombre del Kit</label><input type="text" id="kit-name"
+                                        required></div>
+                                <div class="form-group"><label>Precio Venta (L)</label><input type="number"
+                                        id="kit-price" required></div>
+                                <h4 style="margin:15px 0 10px 0; color:#64748b;">Ingredientes (Qué se descuenta del
+                                    inventario):</h4>
+                                <div id="kit-ingredients-container"
+                                    style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; max-height:300px; overflow-y:auto; padding-right:5px;">
+                                </div>
+                                <button type="submit" class="primary-btn" style="margin-top:20px;">Guardar Kit</button>
+                            </form>
+                        </div>
+                        <div class="tile highlight">
+                            <h3>Kits Existentes</h3>
+                            <div id="kit-catalog-list" style="text-align:left;"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Purchases Module -->
-                <div id="purchases-module" class="admin-module">
-                    <h2 class="slide-title">Registro de Compras</h2>
-                    <div class="tile">
-                        <form id="purchase-form" class="admin-form">
-                            <div class="form-group">
-                                <label>Material</label>
-                                <select id="purchase-item" required>
-                                    <option value="yeso">Yeso (kg)</option>
-                                    <option value="cemento">Cemento Blanco (kg)</option>
-                                    <option value="pintura">Pintura (ml)</option>
-                                    <option value="pinceles">Pinceles (uds)</option>
-                                    <option value="envases">Envases (uds)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Cantidad</label>
-                                <input type="number" id="purchase-qty" step="0.01" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Costo Total (L)</label>
-                                <input type="number" id="purchase-cost" step="0.01" required>
-                            </div>
-                            <button type="submit" class="primary-btn">Registrar Compra</button>
-                        </form>
+                <div id="catalog-module" class="admin-module">
+                    <h2 class="slide-title">Catálogo Web - Personalización</h2>
+                    <p style="margin-bottom:20px; color:#64748b;">Aquí puedes agregar fotos y descripciones bonitas para
+                        la página de ventas (ventas.html).</p>
+                    <div id="catalog-kits-list"></div>
+                </div>
+
+                <div id="sales-module" class="admin-module">
+                    <h2 class="slide-title">Ventas</h2>
+                    <div class="dashboard-grid">
+                        <div class="tile highlight">
+                            <h3>Registrar Venta</h3>
+                            <form id="sales-form">
+                                <div class="form-group"><label>Seleccionar Kit</label><select id="sale-type"
+                                        required></select></div>
+                                <div class="form-group"><label>Precio</label><input type="number" id="sale-price"
+                                        required></div>
+                                <button type="submit" class="primary-btn success">Vender</button>
+                            </form>
+                        </div>
+                        <div class="tile">
+                            <h3>Total Ganancia</h3>
+                            <div class="big-number" id="total-profit">L 0.00</div>
+                        </div>
                     </div>
-                    <div class="tile mt-4">
-                        <h3>Historial de Compras</h3>
-                        <table class="financial-table" id="purchase-history">
+                    <div class="tile" style="margin-top:30px;">
+                        <h3>Historial</h3>
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-bottom:10px;">
+                            <button onclick="clearSalesHistory()"
+                                style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Borrar
+                                Historial</button>
+                        </div>
+                        <table class="financial-table" id="sales-history">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
-                                    <th>Ítem</th>
-                                    <th>Cant.</th>
-                                    <th>Costo</th>
+                                    <th>Kit</th>
+                                    <th>Precio</th>
+                                    <th>Ganancia</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -1324,208 +593,89 @@
                     </div>
                 </div>
 
-                <!-- Kits Module (NEW) -->
-                <div id="kits-module" class="admin-module">
-                    <h2 class="slide-title">Mis Kits / Pedidos Personalizados</h2>
-                    <div class="dashboard-grid">
-                        <div class="tile">
-                            <h3>Crear Nuevo Diseño de Kit</h3>
-                            <form id="kit-config-form" class="admin-form">
-                                <div class="form-group">
-                                    <label>Nombre del Kit</label>
-                                    <input type="text" id="kit-name" placeholder="Ej: Kit Cumpleaños" required>
+                <div id="purchases-module" class="admin-module">
+                    <h2 class="slide-title">Compras</h2>
+                    <div class="tile">
+                        <form id="purchase-form">
+                            <div class="dashboard-grid" style="margin-top:0;">
+                                <div class="form-group"><label>Material</label><select id="purchase-item"></select>
                                 </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <div class="form-group">
-                                        <label>Figura GRANDE (uds)</label>
-                                        <input type="number" id="kit-figura-g" step="1" value="2" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Figura PEQUEÑA (uds)</label>
-                                        <input type="number" id="kit-figura-p" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Roja (ml)</label>
-                                        <input type="number" id="kit-roja" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Amarilla (ml)</label>
-                                        <input type="number" id="kit-amarilla" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>T. Azul (ml)</label>
-                                        <input type="number" id="kit-azul" step="1" value="5" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Pinceles (uds)</label>
-                                        <input type="number" id="kit-pinceles" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Paletas (uds)</label>
-                                        <input type="number" id="kit-paletas" step="1" value="1" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Envases (uds)</label>
-                                        <input type="number" id="kit-envases" step="1" value="3" required>
-                                    </div>
-                                    <div class="form-group" style="grid-column: span 2;">
-                                        <label>Precio Venta (L)</label>
-                                        <input type="number" id="kit-price" value="150" required>
-                                    </div>
-                                </div>
-
-                                <!-- Automatic Stats Panel -->
-                                <div
-                                    style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px dashed #cbd5e1;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                        <span style="font-size: 13px; color: #64748b;">Costo Producción:</span>
-                                        <span id="suggested-cost-display" style="font-weight: 700; color: #ef4444;">L
-                                            48.14</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <span style="font-size: 13px; color: #64748b;">Precio Sugerido:</span>
-                                        <span id="suggested-price-display" style="font-weight: 700; color: #2563eb;">L
-                                            150.00</span>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="primary-btn">Guardar en Catálogo</button>
-                            </form>
-                        </div>
-                        <div class="tile highlight">
-                            <h3>Catálogo Actual</h3>
-                            <div id="kit-catalog-list" style="max-height: 400px; overflow-y: auto;">
-                                <!-- Dynamic content -->
+                                <div class="form-group"><label>Cantidad</label><input type="number" id="purchase-qty"
+                                        required></div>
+                                <div class="form-group"><label>Costo Total</label><input type="number"
+                                        id="purchase-cost" required></div>
                             </div>
-                        </div>
+                            <button type="submit" class="primary-btn">Registrar Compra</button>
+                        </form>
                     </div>
                 </div>
 
-                <!-- Sales Module -->
-                <div id="sales-module" class="admin-module">
-                    <h2 class="slide-title">Ventas / Facturación</h2>
-                    <div class="dashboard-grid">
-                        <div class="tile highlight">
-                            <h3>Nueva Venta</h3>
-                            <form id="sales-form" class="admin-form">
-                                <div class="form-group">
-                                    <label>Tipo de Kit</label>
-                                    <select id="sale-type" required>
-                                        <option value="super-kit">Súper Kit (2G + 1P + Acc)</option>
-                                        <option value="kit-basico">Kit Básico (1G + 1P + Acc)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Precio Venta (L)</label>
-                                    <input type="number" id="sale-price" value="150" required>
-                                </div>
-                                <button type="submit" class="primary-btn success">Realizar Venta</button>
-                            </form>
-                            <p class="mt-2 text-small">*Vender un kit descuenta automáticamente materiales del stock.
-                            </p>
-                        </div>
-                        <div class="tile">
-                            <h3>Resumen Financiero</h3>
-                            <div class="big-number" id="total-profit">L 0.00</div>
-                            <p>Ganancia Total Acumulada</p>
-                        </div>
-                        <div class="tile">
-                            <h3>Distribución de Ventas</h3>
-                            <div style="max-height: 200px; display: flex; justify-content: center;">
-                                <canvas id="salesChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="tile" style="grid-column: span 3;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                            <h3 style="margin: 0;">Registro de Ventas</h3>
-                            <div style="display: flex; gap: 10px;">
-                                <button onclick="exportToCSV()" class="primary-btn"
-                                    style="background: #10b981; padding: 8px 15px; font-size: 13px;">
-                                    <i class="fa-solid fa-file-csv"></i> CSV
-                                </button>
-                                <button onclick="exportToPDF()" class="primary-btn"
-                                    style="background: #ef4444; padding: 8px 15px; font-size: 13px;">
-                                    <i class="fa-solid fa-file-pdf"></i> PDF
-                                </button>
-                                <button onclick="clearSalesHistory()" class="primary-btn"
-                                    style="background: #64748b; padding: 8px 15px; font-size: 13px;">
-                                    <i class="fa-solid fa-trash-can"></i> Limpiar
-                                </button>
-                            </div>
-                        </div>
-                        <div class="financial-table-wrapper">
-                            <table class="financial-table" id="sales-history">
-                                <thead>
-                                    <tr>
-                                        <th>FECHA</th>
-                                        <th>KIT</th>
-                                        <th>PRECIO</th>
-                                        <th>GANANCIA</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sales-list-body">
-                                    <!-- Ventas dinámicas -->
-                                </tbody>
-                                <tfoot id="sales-footer" style="background: #f8fafc; font-weight: 800;">
-                                    <!-- Totales dinámicos -->
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div></div>
-
+                <div id="orders-module" class="admin-module">
+                    <h2 class="slide-title">Pedidos Pendientes</h2>
+                    <p style="color:#64748b; margin-bottom:20px;">Estos pedidos han reservado stock pero aún no se ha
+                        confirmado el pago. Confirma para registrar la venta o rechaza para devolver el stock.</p>
+                    <div id="pending-orders-list" class="dashboard-grid"></div>
                 </div>
+
             </div>
         </div>
+    </div>
 
-    </div> <!-- End main-content -->
-
-    <!-- Firebase SDK -->
     <script>
-        /* --- STATE MANAGEMENT --- */
+        // === DEBUGGER ===
+        function logDebug(msg) {
+            console.log(msg);
+            const el = document.getElementById('debug-console');
+            if (el) el.innerText = msg;
+        }
+
         let db = null;
-        let salesChart = null;
-        const defaultState = {
-            stock: {
-                figura_g: 0,
-                figura_p: 0,
-                t_roja: 0,
-                t_amarilla: 0,
-                t_azul: 0,
-                pinceles: 0,
-                paletas: 0,
-                envases: 0
-            },
-            inventoryData: {
-                figura_g: { name: "Figura Grande", unit: "uds", icon: "fa-shapes", color: "blue", category: "figura_g" },
-                figura_p: { name: "Figura Pequeña", unit: "uds", icon: "fa-shapes", color: "yellow", category: "figura_p" },
-                t_roja: { name: "T. Roja", unit: "ml", icon: "fa-droplet", color: "red", category: "pintura" },
-                t_amarilla: { name: "T. Amarilla", unit: "ml", icon: "fa-droplet", color: "yellow", category: "pintura" },
-                t_azul: { name: "T. Azul", unit: "ml", icon: "fa-droplet", color: "blue", category: "pintura" },
-                pinceles: { name: "Pinceles", unit: "uds", icon: "fa-paintbrush", color: "primary", category: "herramientas" },
-                paletas: { name: "Paletas", unit: "uds", icon: "fa-palette", color: "accent", category: "herramientas" },
-                envases: { name: "Envases", unit: "uds", icon: "fa-box-open", color: "primary", category: "envases" }
-            },
+        let state = {
+            stock: {},
+            inventoryData: {},
+            recipes: {},
             purchases: [],
             sales: [],
-            recipes: {},
+            catalogData: {},
             totalProfit: 0
         };
 
-        let state = { ...defaultState };
+        // Función para verificar si Firebase ha cargado
+        function checkFirebase() {
+            logDebug("Verificando Firebase...");
+            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+                logDebug("SDKs cargados. Iniciando App...");
+                initApp();
+            } else {
+                logDebug("Esperando SDKs...");
+                setTimeout(checkFirebase, 500); // Reintentar cada 0.5s
+            }
+        }
 
-        async function initFirebase() {
-            updateSyncUI('syncing');
+        // Iniciar el chequeo
+        window.onload = checkFirebase;
+
+        async function initApp() {
             try {
                 db = firebase.firestore();
-                console.log("Firestore inicializado");
-                await loadState();
+                logDebug("Conectando a Firestore...");
+
+                await loadState(); // Intentar cargar datos
+
+                logDebug("¡Conectado y cargado!");
                 updateSyncUI('cloud');
+                updateUI();
             } catch (e) {
-                console.error("Error al inicializar Firebase:", e);
+                console.error("Error crítico:", e);
+                logDebug("Error: " + e.message);
                 updateSyncUI('local');
-                loadStateLocal();
+                // Fallback a LocalStorage si falla la red
+                const saved = localStorage.getItem('yesos_backup');
+                if (saved) {
+                    state = JSON.parse(saved);
+                    updateUI();
+                    alert("No se pudo conectar a la base de datos. Se cargó la copia local.");
+                }
             }
         }
 
@@ -1535,631 +685,434 @@
             const icon = el.querySelector('i');
             const span = el.querySelector('span');
 
-            if (status === 'syncing') {
-                icon.style.color = '#fbbf24'; // Yellow
-                span.innerText = 'Estado: Sincronizando...';
-            } else if (status === 'cloud') {
-                icon.style.color = '#10b981'; // Green
-                span.innerText = 'Estado: En la Nube';
+            if (status === 'cloud') {
+                icon.style.color = '#10b981'; // Verde
+                span.innerText = 'Estado: Conectado (Nube)';
             } else {
-                icon.style.color = '#ef4444'; // Red
-                span.innerText = 'Estado: Local (Sin nube)';
+                icon.style.color = '#ef4444'; // Rojo
+                span.innerText = 'Estado: Local (Error/Sin Conexión)';
             }
         }
 
         async function loadState() {
-            if (!db) return loadStateLocal();
-
-            try {
-                const doc = await db.collection('config').doc('inventoryState').get();
-                if (doc.exists) {
-                    state = doc.data();
-                    console.log("Datos cargados desde Firestore");
-                } else {
-                    loadStateLocal();
-                    // Migrar a Firestore si no hay datos en la nube
-                    await saveState();
-                }
-                updateUI();
-            } catch (e) {
-                console.warn("Firestore no accesible, usando LocalStorage:", e);
-                loadStateLocal();
+            // Intentar leer de Firestore
+            const doc = await db.collection('config').doc('inventoryState').get();
+            if (doc.exists) {
+                const data = doc.data();
+                state = { ...state, ...data };
+                state.catalogData = state.catalogData || {};
+                logDebug("Datos descargados correctamente");
+            } else {
+                logDebug("Conectado, pero no hay datos guardados aún.");
             }
-        }
-
-        function loadStateLocal() {
-            const saved = localStorage.getItem('yesos_db');
-            if (saved) {
-                state = JSON.parse(saved);
-                // Asegurar que las nuevas llaves existen
-                state.stock = { ...defaultState.stock, ...state.stock };
-                state.inventoryData = { ...defaultState.inventoryData, ...state.inventoryData };
-                state.purchases = state.purchases || [];
-                state.sales = state.sales || [];
-                state.recipes = state.recipes || {};
-                state.totalProfit = state.totalProfit || 0;
-            }
-            updateUI();
         }
 
         async function saveState() {
-            // Migraciones rápidas de ser necesario
-            if (state.stock.figuras !== undefined) {
-                state.stock.figura_g = (state.stock.figura_g || 0) + (state.stock.figuras / 2);
-                state.stock.figura_p = (state.stock.figura_p || 0) + (state.stock.figuras / 2);
-                delete state.stock.figuras;
-                delete state.inventoryData.figuras;
-            }
-
-            // Sync con localStorage (respaldo local)
-            localStorage.setItem('yesos_db', JSON.stringify(state));
-
-            // Sync con Firestore (Nube)
-            if (db) {
-                try {
-                    updateSyncUI('syncing');
+            try {
+                if (db) {
                     await db.collection('config').doc('inventoryState').set(state);
-                    console.log("Sincronizado con la nube");
                     updateSyncUI('cloud');
-                } catch (e) {
-                    console.error("Error al sincronizar con Firestore:", e);
-                    updateSyncUI('local');
+                    logDebug("Guardado en nube exitoso");
                 }
+                localStorage.setItem('yesos_backup', JSON.stringify(state)); // Backup local
+                updateUI();
+            } catch (e) {
+                console.error(e);
+                logDebug("Error al guardar: " + e.message);
+                alert("Error guardando en la nube. Verifica tu conexión.");
+                updateSyncUI('local');
             }
-
-            updateUI();
         }
 
-        /* --- DASHBOARD LOGIC --- */
+        // UI Updates
         function updateUI() {
-            // Update Inventory Grid
-            const inventoryContainer = document.getElementById('inventory-container');
-            if (inventoryContainer) {
-                inventoryContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
-                    const data = state.inventoryData[id] || { name: id, unit: "uds", icon: "fa-box" };
-                    const hasImage = data.image && data.image.startsWith('http');
+            renderInventory();
+            renderKits();
+            renderCatalogModule();
+            renderSalesHistory();
+            renderPendingOrders();
+            renderFormOptions();
 
-                    return `
-                        <div class="inventory-card">
-                            <div class="card-actions">
-                                <button class="action-btn edit" onclick="editProduct('${id}')" title="Editar">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button class="action-btn delete" onclick="deleteProduct('${id}')" title="Eliminar">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </div>
-                            <div class="card-img ${data.color ? 'color-' + data.color : ''}" ${hasImage ? `style="background-image: url('${data.image}'); background-size: cover; background-position: center;"` : ''}>
-                                ${hasImage ? '' : `<i class="fa-solid ${data.icon}"></i>`}
-                            </div>
-                            <div class="card-title">${data.name}</div>
-                            <div class="card-qty-wrapper">
-                                <span class="card-qty">${Number(qty).toFixed(2)}</span>
-                                <span class="card-unit">${data.unit}</span>
-                            </div>
-                            <div class="card-controls">
-                                <button class="control-btn minus" onclick="adjustStock('${id}', -1)">-</button>
-                                <button class="control-btn plus" onclick="adjustStock('${id}', 1)">+</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
+            document.getElementById('total-profit').innerText = `L ${state.totalProfit.toFixed(2)}`;
+        }
 
-            // Update Kit Catalog
-            const catalogList = document.getElementById('kit-catalog-list');
-            if (catalogList) {
-                catalogList.innerHTML = Object.entries(state.recipes).map(([name, recipe]) => `
-                    <div class="stock-item" style="flex-direction:column; align-items:flex-start; height:auto; padding:15px 0;">
-                        <div style="display:flex; justify-content:space-between; width:100%; font-weight:700; color:var(--highlight);">
-                            <span>${name}</span>
-                            <span>L ${recipe.price}</span>
+        function renderInventory() {
+            const container = document.getElementById('inventory-container');
+            if (!container) return;
+            container.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
+                const data = state.inventoryData[id] || { name: id, unit: 'uds' };
+                const imgStyle = data.image ? `background-image:url('${data.image}')` : '';
+                return `
+                    <div class="inventory-card">
+                        <div class="card-img" style="${imgStyle}">
+                            ${!data.image ? '<i class="fa-solid fa-box"></i>' : ''}
                         </div>
-                        <div style="font-size:11px; color:#64748b; margin-top:5px; text-align:left;">
-                            ${Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${state.inventoryData[k]?.name || k}: ${v}`).join(' | ')}
+                        <div class="card-title">${data.name}</div>
+                        <div class="card-qty">${qty} <span style="font-size:12px; color:#999;">${data.unit}</span></div>
+                        <div class="card-controls">
+                            <button class="control-btn minus" onclick="adjustStock('${id}', -1)">-</button>
+                            <button class="control-btn plus" onclick="adjustStock('${id}', 1)">+</button>
                         </div>
-                        <button onclick="removeKit('${name}')" style="margin-top:8px; font-size:11px; color:#ef4444; background:none; border:1px solid #ef4444; border-radius:4px; padding:2px 5px; cursor:pointer;">Eliminar</button>
+                        <button onclick="editProduct('${id}')" style="position:absolute; top:10px; right:10px; border:none; background:none; cursor:pointer; color:#3b82f6;"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderKits() {
+            const list = document.getElementById('kit-catalog-list');
+            const ingContainer = document.getElementById('kit-ingredients-container');
+
+            if (list) {
+                list.innerHTML = Object.entries(state.recipes).map(([name, r]) => `
+                    <div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
+                        <span><b>${name}</b> (L ${r.price})</span>
+                        <button onclick="deleteKit('${name}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `).join('');
             }
 
-            // Update Sales Dropdown
-            const saleSelect = document.getElementById('sale-type');
-            if (saleSelect) {
-                const currentVal = saleSelect.value;
-                saleSelect.innerHTML = Object.keys(state.recipes).map(name => `
-                    <option value="${name}">${name}</option>
-                `).join('');
-                if (state.recipes[currentVal]) saleSelect.value = currentVal;
-                else updateSalePrice();
-            }
-
-            // Update Histories
-            renderTable('purchase-history', state.purchases);
-            renderTable('sales-history', state.sales);
-            const totalProfitEl = document.getElementById('total-profit');
-            if (totalProfitEl) totalProfitEl.innerText = `L ${state.totalProfit.toFixed(2)}`;
-
-            // Update Analytics (Totals & Chart)
-            updateAnalytics();
-
-            // Sync Purchase Dropdown
-            updatePurchaseItems();
-
-            // Update Web Catalog\r}function updateAnalytics() {
-            // Calculate Totals for Sales Table
-            const footer = document.getElementById('sales-footer');
-            if (footer) {
-                const totalP = state.sales.reduce((acc, s) => acc + (parseFloat(s.price) || 0), 0);
-                const totalG = state.sales.reduce((acc, s) => acc + (parseFloat(s.profit) || 0), 0);
-                footer.innerHTML = `
-                    <tr>
-                        <td colspan="2" style="text-align:right;">TOTALES HISTÓRICOS:</td>
-                        <td>L ${totalP.toFixed(2)}</td>
-                        <td>L ${totalG.toFixed(2)}</td>
-                    </tr>
-                `;
-            }
-
-            // Pie Chart logic
-            const canvas = document.getElementById('salesChart');
-            if (!canvas) return;
-
-            const distribution = {};
-            state.sales.forEach(s => {
-                distribution[s.type] = (distribution[s.type] || 0) + 1;
-            });
-
-            const labels = Object.keys(distribution).map(k => state.inventoryData[k]?.name || k);
-            const data = Object.values(distribution);
-
-            if (salesChart) {
-                salesChart.data.labels = labels;
-                salesChart.data.datasets[0].data = data;
-                salesChart.update();
-            } else {
-                const ctx = canvas.getContext('2d');
-                salesChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
-                            borderWidth: 2,
-                            borderColor: '#ffffff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { boxWidth: 10, font: { size: 10 } }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (item) => `${item.label}: ${item.raw} kits`
-                                }
-                            }
-                        },
-                        cutout: '60%'
-                    }
-                });
+            if (ingContainer && ingContainer.innerHTML === '') {
+                ingContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
+                    const name = state.inventoryData[id]?.name || id;
+                    return `
+                        <div class="form-group" style="margin-bottom:5px;">
+                            <label style="font-size:12px;">${name}</label>
+                            <input type="number" class="kit-ing-input" data-id="${id}" value="0" step="0.01" style="padding:8px;">
+                        </div>
+                    `;
+                }).join('');
             }
         }
 
-        function adjustStock(id, amount) {
-            state.stock[id] = Math.max(0, (state.stock[id] || 0) + amount);
+        // --- MÓDULO CATÁLOGO WEB ---
+        function renderCatalogModule() {
+            const container = document.getElementById('catalog-kits-list');
+            if (!container) return;
+
+            const recipes = state.recipes || {};
+            if (Object.keys(recipes).length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; padding: 60px;">No hay kits creados. Ve a "Mis Kits" para crear uno.</p>';
+                return;
+            }
+
+            // Initialize catalogData if it doesn't exist
+            state.catalogData = state.catalogData || {};
+
+            container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
+                const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
+                const defaultItems = Object.entries(recipe)
+                    .filter(([k]) => k !== 'price')
+                    .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
+                    .join(', ');
+                const safeName = kitName.replace(/\s+/g, '_');
+
+                return `
+                    <div class="tile" style="margin-bottom: 30px;">
+                        <h3 style="margin-bottom: 20px; color: var(--highlight);">${kitName}</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <div class="form-group">
+                                    <label>Imagen del Kit</label>
+                                    
+                                    <!-- DRAG & DROP ZONE -->
+                                    <div class="drop-zone" id="drop-zone-${safeName}" 
+                                         onclick="document.getElementById('file-input-${safeName}').click()"
+                                         ondragover="handleDragOver(event)" 
+                                         ondrop="handleDrop(event, '${safeName}')"
+                                         style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f8fafc;">
+                                        
+                                        <div id="preview-${safeName}" style="margin-bottom: 15px;">
+                                            ${catalogInfo.image ? `<img src="${catalogInfo.image}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">` : '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 40px; color: #94a3b8;"></i>'}
+                                        </div>
+                                        
+                                        <p style="color: #64748b; margin: 0; font-size: 14px;">
+                                            ${catalogInfo.image ? 'Clic o arrastra para cambiar' : 'Arrastra una imagen aquí o haz clic'}
+                                        </p>
+                                        <input type="file" id="file-input-${safeName}" accept="image/*" style="display: none;" onchange="handleFileSelect(event, '${safeName}')">
+                                        
+                                        <!-- Hidden URL input for compatibility/saving -->
+                                        <input type="hidden" id="catalog-img-${safeName}" value="${catalogInfo.image || ''}">
+                                        
+                                        <!-- Progress Bar -->
+                                        <div id="progress-${safeName}" style="width: 0%; height: 4px; background: #3b82f6; transition: width 0.3s; margin-top: 10px; display: none;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top: 15px;">
+                                    <label>Descripción para Clientes</label>
+                                    <textarea 
+                                        id="catalog-desc-${safeName}" 
+                                        rows="4" 
+                                        placeholder="Describe el kit para tus clientes..."
+                                        style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${catalogInfo.description || ''}</textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="form-group">
+                                    <label>Lo que Incluye (uno por línea)</label>
+                                    <textarea 
+                                        id="catalog-items-${safeName}" 
+                                        rows="8" 
+                                        placeholder="${defaultItems}"
+                                        style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${(catalogInfo.customItems || []).join('\n')}</textarea>
+                                    <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Si está vacío, se mostrará la lista automática</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="saveCatalogKit('${kitName}')" class="primary-btn" style="margin-top: 15px;">
+                            <i class="fa-solid fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- DRAG & DROP HANDLERS ---
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.style.borderColor = '#3b82f6';
+            e.currentTarget.style.backgroundColor = '#eff6ff';
+        }
+
+        function handleDrop(e, safeName) {
+            e.preventDefault();
+            e.stopPropagation();
+            const zone = document.getElementById(`drop-zone-${safeName}`);
+            zone.style.borderColor = '#cbd5e1';
+            zone.style.backgroundColor = '#f8fafc';
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadImage(files[0], safeName);
+            }
+        }
+
+        function handleFileSelect(e, safeName) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadImage(files[0], safeName);
+            }
+        }
+
+        function uploadImage(file, safeName) {
+            // Check if Storage is available
+            if (typeof firebase === 'undefined' || !firebase.storage) {
+                alert("Error: Firebase Storage no está habilitado o cargado. Verifica tu conexión.");
+                return;
+            }
+
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${file.name}`);
+
+            const uploadTask = fileRef.put(file);
+            const progressBar = document.getElementById(`progress-${safeName}`);
+            const preview = document.getElementById(`preview-${safeName}`);
+
+            progressBar.style.display = 'block';
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressBar.style.width = progress + '%';
+                },
+                (error) => {
+                    console.error("Upload error:", error);
+                    alert("Error al subir la imagen: " + error.message);
+                    progressBar.style.display = 'none';
+                },
+                () => {
+                    // Upload completed successfully
+                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                        console.log('File available at', downloadURL);
+                        document.getElementById(`catalog-img-${safeName}`).value = downloadURL;
+                        preview.innerHTML = `<img src="${downloadURL}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+                        progressBar.style.display = 'none';
+                    });
+                }
+            );
+        }
+
+        async function saveCatalogKit(kitName) {
+            const safeKitName = kitName.replace(/\s+/g, '_');
+            const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
+            const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
+            const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
+            const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
+
+            state.catalogData = state.catalogData || {};
+            state.catalogData[kitName] = { image, description, customItems };
+
+            try {
+                await saveState();
+                alert(`✅ Cambios guardados para "${kitName}"`);
+            } catch (e) {
+                console.error(e);
+                alert('Error al guardar cambios');
+            }
+        }
+
+        function renderSalesHistory() {
+            const tbody = document.querySelector('#sales-history tbody');
+            if (tbody) {
+                tbody.innerHTML = state.sales.slice().reverse().slice(0, 10).map(s => `
+                    <tr>
+                        <td>${s.date}</td>
+                        <td>${s.type}</td>
+                        <td>L ${s.price}</td>
+                        <td>L ${s.profit}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function renderFormOptions() {
+            const sSale = document.getElementById('sale-type');
+            if (sSale) sSale.innerHTML = Object.keys(state.recipes).map(k => `<option value="${k}">${k}</option>`).join('');
+
+            const sPurch = document.getElementById('purchase-item');
+            if (sPurch) sPurch.innerHTML = Object.entries(state.inventoryData).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+        }
+
+        function adjustStock(id, delta) {
+            state.stock[id] = Math.max(0, (state.stock[id] || 0) + delta);
             saveState();
         }
 
-        function toggleNewProductForm(isEdit = false) {
-            const modal = document.getElementById('new-product-modal');
-            const form = document.getElementById('new-product-form');
-            if (modal.style.display === 'none' || modal.style.display === '') {
-                modal.style.display = 'block';
-                modal.querySelector('h3').innerText = isEdit ? 'Editar Producto' : 'Agregar Nuevo Producto al Catálogo';
-            } else {
-                modal.style.display = 'none';
-                form.reset();
-                document.getElementById('edit-prod-id').value = '';
-            }
+        function toggleNewProductForm() {
+            const el = document.getElementById('new-product-modal');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
         function editProduct(id) {
-            const data = state.inventoryData[id];
-            const qty = state.stock[id];
-
+            const d = state.inventoryData[id];
             document.getElementById('edit-prod-id').value = id;
-            document.getElementById('new-prod-name').value = data.name;
-            document.getElementById('new-prod-unit').value = data.unit;
-            document.getElementById('new-prod-qty').value = qty;
-            document.getElementById('new-prod-icon').value = data.icon || 'fa-shapes';
-            document.getElementById('new-prod-img').value = data.image || '';
-            document.getElementById('new-prod-category').value = data.category || 'general';
-            document.getElementById('new-prod-color').value = data.color || 'blue';
-
-            toggleNewProductForm(true);
+            document.getElementById('new-prod-name').value = d.name;
+            document.getElementById('new-prod-unit').value = d.unit;
+            document.getElementById('new-prod-qty').value = state.stock[id];
+            toggleNewProductForm();
         }
 
-        function deleteProduct(id) {
-            const name = state.inventoryData[id]?.name || id;
-            if (confirm(`¿Estás seguro de eliminar "${name}" del inventario?`)) {
-                delete state.stock[id];
-                delete state.inventoryData[id];
-                saveState();
+        document.getElementById('new-product-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('edit-prod-id').value;
+            const name = document.getElementById('new-prod-name').value;
+            const unit = document.getElementById('new-prod-unit').value;
+            const qty = parseFloat(document.getElementById('new-prod-qty').value);
+            const cat = document.getElementById('new-prod-category').value;
+
+            const id = editId || name.toLowerCase().replace(/\s+/g, '_');
+
+            state.inventoryData[id] = { name, unit, category: cat };
+            state.stock[id] = qty;
+
+            await saveState();
+            toggleNewProductForm();
+            document.getElementById('new-product-form').reset();
+            document.getElementById('edit-prod-id').value = '';
+        });
+
+        document.getElementById('kit-config-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('kit-name').value;
+            const price = parseFloat(document.getElementById('kit-price').value);
+
+            const recipe = { price };
+            document.querySelectorAll('.kit-ing-input').forEach(input => {
+                const val = parseFloat(input.value);
+                if (val > 0) recipe[input.dataset.id] = val;
+            });
+
+            state.recipes[name] = recipe;
+            await saveState();
+            alert('Kit guardado');
+            e.target.reset();
+        });
+
+        document.getElementById('sales-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('sale-type').value;
+            const price = parseFloat(document.getElementById('sale-price').value);
+            const recipe = state.recipes[type];
+
+            for (let [id, req] of Object.entries(recipe)) {
+                if (id === 'price') continue;
+                if ((state.stock[id] || 0) < req) return alert(`Falta stock de: ${state.inventoryData[id]?.name || id}`);
             }
-        }
 
-        function removeKit(name) {
-            if (Object.keys(state.recipes).length <= 1) return alert("Debes tener al menos un kit en el catálogo.");
-            if (confirm(`¿Estás seguro de eliminar "${name}"?`)) {
+            for (let [id, req] of Object.entries(recipe)) {
+                if (id !== 'price') state.stock[id] -= req;
+            }
+
+            const profit = price * 0.5;
+            state.sales.push({
+                date: new Date().toLocaleDateString(),
+                type, price, profit, items: recipe
+            });
+            state.totalProfit += profit;
+
+            await saveState();
+            alert('Venta registrada');
+        });
+
+        document.getElementById('purchase-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const item = document.getElementById('purchase-item').value;
+            const qty = parseFloat(document.getElementById('purchase-qty').value);
+            const cost = parseFloat(document.getElementById('purchase-cost').value);
+
+            state.stock[item] = (state.stock[item] || 0) + qty;
+            state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost });
+
+            await saveState();
+            alert('Compra registrada');
+            e.target.reset();
+        });
+
+        function deleteKit(name) {
+            if (confirm('¿Borrar kit?')) {
                 delete state.recipes[name];
                 saveState();
             }
         }
 
-        function updateSalePrice() {
-            const typeSelect = document.getElementById('sale-type');
-            if (!typeSelect) return;
-            const type = typeSelect.value;
-            if (state.recipes[type]) {
-                document.getElementById('sale-price').value = state.recipes[type].price;
-            }
-        }
-
-        function renderTable(id, data) {
-            const table = document.getElementById(id);
-            if (!table) return;
-            const tbody = table.querySelector('tbody');
-            if (!tbody) return;
-            tbody.innerHTML = data.slice(-5).reverse().map(entry => `
-                <tr>
-                    <td>${entry.date}</td>
-                    <td>${state.inventoryData[entry.item]?.name || entry.item || entry.type}</td>
-                    <td>${entry.qty || entry.price}</td>
-                    <td>${entry.cost || (entry.profit ? entry.profit.toFixed(2) : '0')}</td>
-                </tr>
-            `).join('');
-        }
-
-        function updatePurchaseItems() {
-            const select = document.getElementById('purchase-item');
-            if (!select) return;
-            const currentVal = select.value;
-            select.innerHTML = Object.entries(state.inventoryData).map(([id, data]) => `
-                <option value="${id}">${data.name} (${data.unit})</option>
-            `).join('');
-            if (state.inventoryData[currentVal]) select.value = currentVal;
-        }
-
-        /* --- FORMS --- */
-        const purchaseForm = document.getElementById('purchase-form');
-        if (purchaseForm) {
-            purchaseForm.onsubmit = (e) => {
-                e.preventDefault();
-                const item = document.getElementById('purchase-item').value;
-                const qty = parseFloat(document.getElementById('purchase-qty').value);
-                const cost = parseFloat(document.getElementById('purchase-cost').value);
-
-                state.stock[item] = (state.stock[item] || 0) + qty;
-                state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost });
-                saveState();
-                e.target.reset();
-            };
-        }
-
-        const newProductForm = document.getElementById('new-product-form');
-        if (newProductForm) {
-            newProductForm.onsubmit = (e) => {
-                e.preventDefault();
-                const editId = document.getElementById('edit-prod-id').value;
-                const name = document.getElementById('new-prod-name').value;
-                const unit = document.getElementById('new-prod-unit').value;
-                const icon = document.getElementById('new-prod-icon').value;
-                const img = document.getElementById('new-prod-img').value;
-                const category = document.getElementById('new-prod-category').value;
-                const color = document.getElementById('new-prod-color').value;
-                const qty = parseFloat(document.getElementById('new-prod-qty').value) || 0;
-
-                let id = editId;
-                if (!id) {
-                    id = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
-                }
-
-                state.stock[id] = qty;
-                state.inventoryData[id] = { name, unit, icon, image: img, category: category, color: color };
-
-                saveState();
-                toggleNewProductForm();
-            };
-        }
-
-        const kitForm = document.getElementById('kit-config-form');
-        if (kitForm) {
-            kitForm.onsubmit = (e) => {
-                e.preventDefault();
-                const name = document.getElementById('kit-name').value;
-
-                state.recipes[name] = {
-                    figura_g: parseInt(document.getElementById('kit-figura-g').value) || 0,
-                    figura_p: parseInt(document.getElementById('kit-figura-p').value) || 0,
-                    t_roja: parseFloat(document.getElementById('kit-roja').value) || 0,
-                    t_amarilla: parseFloat(document.getElementById('kit-amarilla').value) || 0,
-                    t_azul: parseFloat(document.getElementById('kit-azul').value) || 0,
-                    pinceles: parseInt(document.getElementById('kit-pinceles').value) || 0,
-                    paletas: parseInt(document.getElementById('kit-paletas').value) || 0,
-                    envases: parseInt(document.getElementById('kit-envases').value) || 0,
-                    price: parseFloat(document.getElementById('kit-price').value)
-                };
-                saveState();
-                e.target.reset();
-                updateKitStats();
-                alert(`Kit "${name}" guardado correctamente.`);
-            };
-        }
-
-        const saleSelectEl = document.getElementById('sale-type');
-        if (saleSelectEl) saleSelectEl.onchange = updateSalePrice;
-
-        const salesForm = document.getElementById('sales-form');
-        if (salesForm) {
-            salesForm.onsubmit = (e) => {
-                e.preventDefault();
-                const type = document.getElementById('sale-type').value;
-                const price = parseFloat(document.getElementById('sale-price').value);
-                const recipe = state.recipes[type];
-
-                for (const [item, req] of Object.entries(recipe)) {
-                    if (item === 'price') continue;
-                    if ((state.stock[item] || 0) < req) {
-                        alert(`¡Falta stock de ${state.inventoryData[item]?.name || item}!`);
-                        return;
-                    }
-                }
-
-                for (const [item, req] of Object.entries(recipe)) {
-                    if (item === 'price') continue;
-                    state.stock[item] -= req;
-                }
-
-                // Costos unitarios validados
-                const unitCosts = {
-                    figura_g: 10.42,
-                    figura_p: 3.47,
-                    t_roja: 0.522, // L 7.83 / 15ml
-                    t_amarilla: 0.522,
-                    t_azul: 0.522,
-                    pinceles: 4.00,
-                    paletas: 4.00,
-                    envases: 2.66  // L 8.00 / 3
-                };
-
-                let costProduction = 0;
-                for (const [item, req] of Object.entries(recipe)) {
-                    if (item === 'price') continue;
-                    costProduction += (unitCosts[item] || 0) * req;
-                }
-
-                const profit = price - costProduction;
-                state.sales.push({
-                    date: new Date().toLocaleDateString(),
-                    type,
-                    price,
-                    profit: parseFloat(profit.toFixed(2)),
-                    items: { ...recipe } // Guardamos copia de lo que se vendió
-                });
-                state.totalProfit += profit;
-                saveState();
-                e.target.reset();
-                updateSalePrice();
-                alert(`¡Venta realizada! Se han descontado los materiales del inventario.`);
-            };
-        }
-
         function clearSalesHistory() {
-            if (confirm('¿Estás seguro de que deseas borrar TODO el historial de ventas? Esta acción no se puede deshacer.')) {
+            if (confirm('¿Borrar TODO el historial de ventas?')) {
                 state.sales = [];
                 state.totalProfit = 0;
                 saveState();
-                alert('Historial de ventas borrado.');
             }
-        }
-
-        function exportToCSV() {
-            if (state.sales.length === 0) return alert('No hay ventas para exportar.');
-
-            const headers = ['Fecha', 'Kit', 'Precio', 'Ganancia', 'Fig. G', 'Fig. P', 'T. Roja', 'T. Ama', 'T. Azu', 'Pinceles', 'Paletas', 'Envases'];
-            const rows = state.sales.map(s => [
-                s.date,
-                s.type,
-                s.price,
-                s.profit,
-                s.items?.figura_g || 0,
-                s.items?.figura_p || 0,
-                s.items?.t_roja || 0,
-                s.items?.t_amarilla || 0,
-                s.items?.t_azul || 0,
-                s.items?.pinceles || 0,
-                s.items?.paletas || 0,
-                s.items?.envases || 0
-            ]);
-
-            let csvContent = "data:text/csv;charset=utf-8,"
-                + headers.join(",") + "\n"
-                + rows.map(e => e.join(",")).join("\n");
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Ventas_Yesos_${new Date().toLocaleDateString()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function exportToPDF() {
-            if (state.sales.length === 0) return alert('No hay ventas para exportar.');
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('landscape');
-
-            doc.setFontSize(18);
-            doc.text("Reporte Detallado de Ventas - YESOS Admin", 14, 20);
-            doc.setFontSize(11);
-            doc.text(`Fecha de Reporte: ${new Date().toLocaleDateString()}`, 14, 30);
-            doc.text(`Ganancia Total: L ${state.totalProfit.toFixed(2)}`, 14, 36);
-
-            const headers = [['Fecha', 'Kit', 'Precio', 'Ganancia', 'F. G', 'F. P', 'Rojo', 'Amar', 'Azul', 'Pinc', 'Pale', 'Enva']];
-            const data = state.sales.map(s => [
-                s.date,
-                s.type.substring(0, 15),
-                s.price,
-                s.profit,
-                s.items?.figura_g || 0,
-                s.items?.figura_p || 0,
-                s.items?.t_roja || 0,
-                s.items?.t_amarilla || 0,
-                s.items?.t_azul || 0,
-                s.items?.pinceles || 0,
-                s.items?.paletas || 0,
-                s.items?.envases || 0
-            ]);
-
-            doc.autoTable({
-                head: headers,
-                body: data,
-                startY: 45,
-                theme: 'grid',
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [30, 41, 59] }
-            });
-
-            doc.save(`Reporte_Ventas_${new Date().toLocaleDateString()}.pdf`);
-        }
-
-        // --- AUTOMATIC KIT CALCULATION ---
-        function updateKitStats() {
-            const figG = parseFloat(document.getElementById('kit-figura-g').value) || 0;
-            const figP = parseFloat(document.getElementById('kit-figura-p').value) || 0;
-            const tRoja = parseFloat(document.getElementById('kit-roja').value) || 0;
-            const tAmari = parseFloat(document.getElementById('kit-amarilla').value) || 0;
-            const tAzul = parseFloat(document.getElementById('kit-azul').value) || 0;
-            const pinceles = parseFloat(document.getElementById('kit-pinceles').value) || 0;
-            const paletas = parseFloat(document.getElementById('kit-paletas').value) || 0;
-            const envases = parseFloat(document.getElementById('kit-envases').value) || 0;
-
-            const totalCost = (figG * 10.42) + (figP * 3.47) +
-                ((tRoja + tAmari + tAzul) * 0.522) +
-                (pinceles * 4) + (paletas * 4) + (envases * 2.66);
-
-            const suggestedPrice = totalCost * 2.5;
-
-            document.getElementById('suggested-cost-display').innerText = `L ${totalCost.toFixed(2)}`;
-            document.getElementById('suggested-price-display').innerText = `L ${suggestedPrice.toFixed(0)}.00`;
-
-            const priceInput = document.getElementById('kit-price');
-            if (!priceInput.value || priceInput.value == "150") {
-                priceInput.value = suggestedPrice.toFixed(0);
-            }
-        }
-
-        // Listen for changes in Kit Form
-        ['kit-figura-g', 'kit-figura-p', 'kit-roja', 'kit-amarilla', 'kit-azul', 'kit-pinceles', 'kit-paletas', 'kit-envases'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', updateKitStats);
-        });
-
-        /* --- NAVIGATION & MODES --- */
-        const slides = document.querySelectorAll('.slide-container');
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-        const progressBar = document.getElementById('progressBar');
-        let currentSlide = 0;
-
-        function updateSlides() {
-            if (!slides.length) return;
-            slides.forEach((slide, index) => {
-                slide.classList.remove('active');
-                if (index === currentSlide) slide.classList.add('active');
-            });
-            const progress = ((currentSlide + 1) / slides.length) * 100;
-            if (progressBar) progressBar.style.width = `${progress}%`;
-            if (prevBtn) prevBtn.style.visibility = currentSlide === 0 ? 'hidden' : 'visible';
-            if (nextBtn) nextBtn.style.visibility = currentSlide === slides.length - 1 ? 'hidden' : 'visible';
         }
 
         function switchMode(mode) {
-            document.querySelectorAll('.mode-view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(`${mode}-mode`).classList.add('active');
+            document.querySelectorAll('.mode-view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
             if (mode === 'presentation') {
-                const btn = document.querySelector('button[onclick*="presentation"]');
-                if (btn) btn.classList.add('active');
+                document.getElementById('presentation-mode').classList.add('active');
             } else {
-                const btn = document.querySelector('button[onclick*="admin"]');
-                if (btn) btn.classList.add('active');
+                document.getElementById('admin-mode').classList.add('active');
             }
-            const mainContent = document.getElementById('mainContent');
-            if (mainContent) mainContent.style.backgroundColor = (mode === 'presentation') ? '#0f172a' : '#f1f5f9';
         }
 
-        function showModule(mod) {
+        function showModule(modId) {
             switchMode('admin');
-            document.querySelectorAll('.admin-module').forEach(m => m.classList.remove('active'));
-            const moduleEl = document.getElementById(`${mod}-module`);
-            if (moduleEl) moduleEl.classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            const btn = document.getElementById(`btn-${mod}`);
+            document.querySelectorAll('.admin-module').forEach(el => el.classList.remove('active'));
+            document.getElementById(modId + '-module').classList.add('active');
+
+            const btn = document.getElementById('btn-' + modId);
             if (btn) btn.classList.add('active');
+        }
 
-            // Auto-hide sidebar on mobile after selection
-            if (window.innerWidth <= 768) {
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) sidebar.classList.remove('active');
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        if (toggleBtn) {
+            toggleBtn.onclick = () => {
+                if (window.innerWidth <= 768) sidebar.classList.toggle('active');
+                else sidebar.classList.toggle('collapsed');
             }
         }
-
-        const sideToggle = document.getElementById('sidebarToggle');
-        if (sideToggle) {
-            sideToggle.onclick = () => {
-                const sidebar = document.getElementById('sidebar');
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.toggle('active');
-                } else {
-                    const isCollapsed = sidebar.classList.toggle('collapsed');
-                    const icon = sideToggle.querySelector('i');
-                    if (icon) {
-                        icon.className = isCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
-                    }
-                }
-            };
-        }
-
-        /* --- INITIALIZATION --- */
-        if (prevBtn) prevBtn.onclick = () => { if (currentSlide > 0) { currentSlide--; updateSlides(); } };
-        if (nextBtn) nextBtn.onclick = () => { if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); } };
-        document.onkeydown = (e) => {
-            const presMode = document.getElementById('presentation-mode');
-            if (!presMode || !presMode.classList.contains('active')) return;
-            if (e.key === 'ArrowRight' || e.key === ' ') { if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); } }
-            else if (e.key === 'ArrowLeft') { if (currentSlide > 0) { currentSlide--; updateSlides(); } }
-        };
-
-        updateSlides();
-
-        // Robust Firebase SDK check
-        function checkFirebase() {
-            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
-                initFirebase();
-            } else {
-                setTimeout(checkFirebase, 100);
-            }
-        }
-        checkFirebase();
     </script>
 </body>
 
