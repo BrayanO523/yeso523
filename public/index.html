@@ -1442,6 +1442,36 @@
                 <!-- Financial Module (Dedicated View) -->
                 <div id="financial-module" class="admin-module">
                     <h2 class="slide-title">Balance Financiero General</h2>
+
+                    <div class="controls-bar"
+                        style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div>
+                            <label
+                                style="display: block; font-size: 12px; color: #64748b; margin-bottom: 5px;">Desde</label>
+                            <input type="date" id="fin-start-date" class="form-control"
+                                style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div>
+                            <label
+                                style="display: block; font-size: 12px; color: #64748b; margin-bottom: 5px;">Hasta</label>
+                            <input type="date" id="fin-end-date" class="form-control"
+                                style="padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <button onclick="renderFinancialDashboard()" class="primary-btn"
+                            style="padding: 8px 15px; height: 38px;">
+                            <i class="fa-solid fa-filter"></i> Filtrar
+                        </button>
+                        <div style="flex-grow: 1;"></div>
+                        <button onclick="exportFinancialReportCSV()" class="primary-btn"
+                            style="background-color: #10b981; padding: 8px 15px; height: 38px;">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                        <button onclick="exportFinancialReportPDF()" class="primary-btn"
+                            style="background-color: #ef4444; padding: 8px 15px; height: 38px;">
+                            <i class="fa-solid fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+
                     <div class="dashboard-grid">
                         <div class="tile highlight">
                             <h3>Ingresos Totales (Ventas)</h3>
@@ -1758,6 +1788,8 @@
                 state.sales = state.sales || [];
                 state.recipes = state.recipes || {};
                 state.totalProfit = state.totalProfit || 0;
+                // Add catalogData support for backward compatibility
+                state.catalogData = state.catalogData || {};
             }
             updateUI();
         }
@@ -1790,7 +1822,90 @@
             updateUI();
         }
 
+
         /* --- DASHBOARD LOGIC --- */
+
+        // --- ORDERS MODULE (Fix) ---
+        function renderPendingOrders() {
+            const container = document.getElementById('pending-orders-list');
+            if (!container) return;
+
+            const pending = state.pendingOrders || [];
+            if (pending.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No hay pedidos pendientes por confirmar.</p>';
+                return;
+            }
+
+            container.innerHTML = pending.map((order, index) => {
+                const total = order.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                const itemsList = order.cart.map(i => `<li>${i.qty}x ${i.name}</li>`).join('');
+
+                return `
+                    <div class="tile">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <span style="font-weight:700; color:#475569;">${order.customer.name}</span>
+                            <span style="font-size:12px; color:#64748b;">${new Date(order.date).toLocaleDateString()}</span>
+                        </div>
+                        <p style="font-size:13px; color:#64748b; margin-bottom:5px;">${order.customer.phone} | ${order.deliveryType}</p>
+                        <ul style="font-size:13px; margin-bottom:15px; padding-left:20px; color:#334155;">
+                            ${itemsList}
+                        </ul>
+                        <div style="font-weight:700; font-size:18px; color:var(--highlight); margin-bottom:15px; text-align:right;">
+                            L ${total.toFixed(2)}
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <button class="primary-btn" style="background:#ef4444; padding:10px;" onclick="rejectOrder(${index})">Rechazar</button>
+                            <button class="primary-btn" style="background:#22c55e; padding:10px;" onclick="confirmOrder(${index})">Confirmar</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function confirmOrder(index) {
+            if (!confirm("¿Confirmar este pedido? Se registrará como venta.")) return;
+
+            const order = state.pendingOrders[index];
+            const total = order.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            state.sales.push({
+                date: new Date().toISOString().split('T')[0], // YYYY-MM-DD for sorting
+                type: "Pedido Web - " + order.customer.name,
+                price: parseFloat(total.toFixed(2)),
+                quantity: 1,
+                profit: parseFloat((total * 0.5).toFixed(2)),
+                items: order.cart
+            });
+
+            state.totalProfit += (total * 0.5);
+
+            state.pendingOrders.splice(index, 1);
+            saveState();
+            renderTable('pending-orders', state.pendingOrders);
+            alert("Pedido confirmado y registrado en ventas.");
+        }
+
+        function rejectOrder(index) {
+            if (!confirm("¿Rechazar este pedido con devolución de stock?")) return;
+
+            const order = state.pendingOrders[index];
+
+            // Return Stock
+            order.cart.forEach(item => {
+                if (state.recipes[item.kitName]) {
+                    const recipe = state.recipes[item.kitName];
+                    for (const [ing, qty] of Object.entries(recipe)) {
+                        if (ing === 'price') continue;
+                        state.stock[ing] = (state.stock[ing] || 0) + (qty * item.qty);
+                    }
+                }
+            });
+
+            state.pendingOrders.splice(index, 1);
+            saveState();
+            alert("Pedido rechazado. Stock devuelto al inventario.");
+        }
+
         // --- MÓDULO CATÁLOGO WEB ---
         function renderCatalogModule() {
             const container = document.getElementById('catalog-kits-list');
@@ -1806,46 +1921,58 @@
             state.catalogData = state.catalogData || {};
 
             container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
-                const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
+                const catalogInfo = state.catalogData[kitName] || { images: [], description: '', customItems: [] };
+
+                // BACKWARD COMPATIBILITY: Migrate single 'image' to 'images' array
+                if (catalogInfo.image && (!catalogInfo.images || catalogInfo.images.length === 0)) {
+                    catalogInfo.images = [catalogInfo.image];
+                }
+
+                const images = catalogInfo.images || [];
+                // Ensure at least 5 slots usually, but we'll render dynamic slots
+
                 const defaultItems = Object.entries(recipe)
                     .filter(([k]) => k !== 'price')
                     .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
                     .join(', ');
                 const safeName = kitName.replace(/\s+/g, '_');
 
+                // Generate Gallery Slots HTML
+                let galleryHtml = '';
+                for (let i = 0; i < 5; i++) {
+                    const imgUrl = images[i] || '';
+                    galleryHtml += `
+                        <div class="gallery-slot" style="position: relative; width: 80px; height: 80px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc; cursor: pointer; transition: all 0.2s;"
+                             onclick="triggerImageUpload('${safeName}', ${i})"
+                             ondragover="handleDragOver(event)"
+                             ondrop="handleDrop(event, '${safeName}', ${i})">
+                            ${imgUrl
+                            ? `<img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                                   <button onclick="removeImage(event, '${kitName}', ${i})" style="position: absolute; top: 0; right: 0; background: rgba(239, 68, 68, 0.9); color: white; border: none; width: 20px; height: 20px; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;">×</button>`
+                            : `<span style="color: #cbd5e1; font-size: 20px;">+</span>`
+                        }
+                            <input type="file" id="file-input-${safeName}-${i}" accept="image/*" style="display: none;" onchange="handleFileSelect(event, '${safeName}', ${i})">
+                            <div id="progress-${safeName}-${i}" style="position: absolute; bottom: 0; left: 0; width: 0%; height: 4px; background: #3b82f6; transition: width 0.3s;"></div>
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="tile" style="margin-bottom: 30px;">
                         <h3 style="margin-bottom: 20px; color: var(--highlight);">${kitName}</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                            
+                            <!-- GALLERY SECTION -->
                             <div>
-                                <div class="form-group">
-                                    <label>Imagen del Kit</label>
-                                    
-                                    <!-- DRAG & DROP ZONE -->
-                                    <div class="drop-zone" id="drop-zone-${safeName}" 
-                                         onclick="document.getElementById('file-input-${safeName}').click()"
-                                         ondragover="handleDragOver(event)" 
-                                         ondrop="handleDrop(event, '${safeName}')"
-                                         style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #f8fafc;">
-                                        
-                                        <div id="preview-${safeName}" style="margin-bottom: 15px;">
-                                            ${catalogInfo.image ? `<img src="${catalogInfo.image}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">` : '<i class="fa-solid fa-cloud-arrow-up" style="font-size: 40px; color: #94a3b8;"></i>'}
-                                        </div>
-                                        
-                                        <p style="color: #64748b; margin: 0; font-size: 14px;">
-                                            ${catalogInfo.image ? 'Clic o arrastra para cambiar' : 'Arrastra una imagen aquí o haz clic'}
-                                        </p>
-                                        <input type="file" id="file-input-${safeName}" accept="image/*" style="display: none;" onchange="handleFileSelect(event, '${safeName}')">
-                                        
-                                        <!-- Hidden URL input for compatibility/saving -->
-                                        <input type="hidden" id="catalog-img-${safeName}" value="${catalogInfo.image || ''}">
-                                        
-                                        <!-- Progress Bar -->
-                                        <div id="progress-${safeName}" style="width: 0%; height: 4px; background: #3b82f6; transition: width 0.3s; margin-top: 10px; display: none;"></div>
-                                    </div>
+                                <label style="font-weight: 600; color: #475569; display: block; margin-bottom: 10px;">Galería de Imágenes (Máx 5)</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    ${galleryHtml}
                                 </div>
+                                <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Clic en "+" para subir o arrastra una imagen. La primera es la principal.</p>
+                            </div>
 
-                                <div class="form-group" style="margin-top: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
                                     <label>Descripción para Clientes</label>
                                     <textarea 
                                         id="catalog-desc-${safeName}" 
@@ -1853,13 +1980,11 @@
                                         placeholder="Describe el kit para tus clientes..."
                                         style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${catalogInfo.description || ''}</textarea>
                                 </div>
-                            </div>
-                            <div>
                                 <div class="form-group">
                                     <label>Lo que Incluye (uno por línea)</label>
                                     <textarea 
                                         id="catalog-items-${safeName}" 
-                                        rows="8" 
+                                        rows="4" 
                                         placeholder="${defaultItems}"
                                         style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">${(catalogInfo.customItems || []).join('\n')}</textarea>
                                     <p style="font-size: 12px; color: #64748b; margin-top: 5px;">Si está vacío, se mostrará la lista automática</p>
@@ -1874,102 +1999,23 @@
             }).join('');
         }
 
-        // --- PEDIDOS PENDIENTES ---
-        function renderPendingOrders() {
-            const container = document.getElementById('pending-orders-list');
-            if (!container) return;
+        // --- GALLERY HELPERS ---
 
-            const orders = state.pendingOrders || [];
-
-            if (orders.length === 0) {
-                container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color:#94a3b8; padding:40px;">No hay pedidos pendientes.</p>';
-                return;
-            }
-
-            container.innerHTML = orders.map(order => {
-                const date = new Date(order.timestamp).toLocaleString();
-                const itemsList = order.items.map(i => `${i.quantity}x ${i.name}`).join('<br>');
-
-                return `
-                    <div class="tile" style="border-left: 5px solid #eab308; text-align:left;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <div>
-                                <span style="font-weight:bold; font-size:18px; display:block;">${order.customer}</span>
-                                <span style="color:#64748b; font-size:14px;"><i class="fa-brands fa-whatsapp"></i> ${order.phone || 'Sin télefono'}</span>
-                            </div>
-                            <span style="color:#64748b; font-size:12px;">${date}</span>
-                        </div>
-                        <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:15px; font-size:14px; color:#475569;">
-                            ${itemsList}
-                        </div>
-                        <div style="font-size:24px; font-weight:bold; margin-bottom:20px; text-align:right;">L ${order.total.toFixed(2)}</div>
-                        <div style="display:flex; gap:10px; justify-content:center;">
-                            <button onclick="confirmOrder('${order.id}')" class="primary-btn success" style="padding:10px; font-size:14px;">Confirmar Pago</button>
-                            <button onclick="rejectOrder('${order.id}')" class="primary-btn" style="background:#ef4444; padding:10px; font-size:14px;">Rechazar</button>
-                            ${order.phone ? `<a href="https://wa.me/504${order.phone.replace(/\D/g, '')}" target="_blank" class="primary-btn" style="background:#25D366; padding:10px; font-size:14px; text-decoration:none; display:flex; align-items:center;"><i class="fa-brands fa-whatsapp"></i></a>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        function triggerImageUpload(safeName, index) {
+            document.getElementById(`file-input-${safeName}-${index}`).click();
         }
 
-        function confirmOrder(orderId) {
-            if (!confirm("¿Confirmar que se recibió el pago? Esto registrará la venta.")) return;
+        function removeImage(e, kitName, index) {
+            e.stopPropagation(); // Prevent triggering upload
+            if (!confirm("¿Eliminar esta imagen?")) return;
 
-            const orderIndex = state.pendingOrders.findIndex(o => o.id === orderId);
-            if (orderIndex === -1) return;
+            state.catalogData[kitName].images[index] = null;
+            // Clean up array (remove nulls)
+            state.catalogData[kitName].images = state.catalogData[kitName].images.filter(img => img);
 
-            const order = state.pendingOrders[orderIndex];
-
-            // Add to sales logic
-            state.sales = state.sales || [];
-
-            order.items.forEach(item => {
-                state.sales.push({
-                    date: new Date().toLocaleDateString(),
-                    type: item.name,
-                    price: item.price,
-                    quantity: item.quantity,
-                    profit: item.profit,
-                    items: { ...item.recipe }
-                });
-            });
-
-            state.totalProfit = (state.totalProfit || 0) + order.profit;
-
-            // Remove from pending
-            state.pendingOrders.splice(orderIndex, 1);
-
-            saveState();
-            alert("Pedido confirmado y venta registrada.");
+            saveState().then(() => renderCatalogModule());
         }
 
-        function rejectOrder(orderId) {
-            if (!confirm("¿Rechazar pedido? El stock reservado será devuelto al inventario.")) return;
-
-            const orderIndex = state.pendingOrders.findIndex(o => o.id === orderId);
-            if (orderIndex === -1) return;
-
-            const order = state.pendingOrders[orderIndex];
-
-            // Restore Stock
-            order.items.forEach(item => {
-                for (let i = 0; i < item.quantity; i++) {
-                    for (const [mat, qty] of Object.entries(item.recipe)) {
-                        if (mat === 'price') continue;
-                        state.stock[mat] = (state.stock[mat] || 0) + qty;
-                    }
-                }
-            });
-
-            // Remove from pending
-            state.pendingOrders.splice(orderIndex, 1);
-
-            saveState();
-            alert("Pedido rechazado. Stock restaurado.");
-        }
-
-        // --- DRAG & DROP HANDLERS ---
         function handleDragOver(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1977,73 +2023,99 @@
             e.currentTarget.style.backgroundColor = '#eff6ff';
         }
 
-        function handleDrop(e, safeName) {
+        function handleDrop(e, safeName, index) {
             e.preventDefault();
             e.stopPropagation();
-            const zone = document.getElementById(`drop-zone-${safeName}`);
-            zone.style.borderColor = '#cbd5e1';
-            zone.style.backgroundColor = '#f8fafc';
+            e.currentTarget.style.borderColor = '#cbd5e1';
+            e.currentTarget.style.backgroundColor = '#f8fafc';
 
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                uploadImage(files[0], safeName);
+                uploadImage(files[0], safeName, index);
             }
         }
 
-        function handleFileSelect(e, safeName) {
+        function handleFileSelect(e, safeName, index) {
             const files = e.target.files;
             if (files.length > 0) {
-                uploadImage(files[0], safeName);
+                uploadImage(files[0], safeName, index);
             }
         }
 
-        function uploadImage(file, safeName) {
-            // Check if Storage is available
+        function uploadImage(file, safeName, index) {
             if (typeof firebase === 'undefined' || !firebase.storage) {
-                alert("Error: Firebase Storage no está habilitado o cargado. Verifica tu conexión.");
+                alert("Error: Firebase Storage no está habilitado o cargado.");
                 return;
             }
 
             const storageRef = firebase.storage().ref();
-            const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${file.name}`);
+            const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${index}_${file.name}`);
 
             const uploadTask = fileRef.put(file);
-            const progressBar = document.getElementById(`progress-${safeName}`);
-            const preview = document.getElementById(`preview-${safeName}`);
+            const progressBar = document.getElementById(`progress-${safeName}-${index}`);
 
-            progressBar.style.display = 'block';
+            if (progressBar) progressBar.style.width = '0%';
 
             uploadTask.on('state_changed',
                 (snapshot) => {
                     const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    progressBar.style.width = progress + '%';
+                    if (progressBar) progressBar.style.width = progress + '%';
                 },
                 (error) => {
                     console.error("Upload error:", error);
-                    alert("Error al subir la imagen: " + error.message);
-                    progressBar.style.display = 'none';
+                    alert("Error al subir: " + error.message);
                 },
                 () => {
-                    // Upload completed successfully
                     uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        console.log('File available at', downloadURL);
-                        document.getElementById(`catalog-img-${safeName}`).value = downloadURL;
-                        preview.innerHTML = `<img src="${downloadURL}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-                        progressBar.style.display = 'none';
+                        // Find the real kit name from safeName
+                        // This is tricky because safeName replaces spaces. Ideally pass real name.
+                        // We'll iterate recipes to find match.
+                        let realKitName = safeName;
+                        Object.keys(state.recipes).forEach(k => {
+                            if (k.replace(/\s+/g, '_') === safeName) realKitName = k;
+                        });
+
+                        state.catalogData = state.catalogData || {};
+                        state.catalogData[realKitName] = state.catalogData[realKitName] || { images: [] };
+
+                        // Ensure images array exists
+                        if (!state.catalogData[realKitName].images) state.catalogData[realKitName].images = [];
+
+                        // Assign to specific slot or append if it's new
+                        // Since UI manages slots visually but array is sequential, we just need to ensure array structure
+                        // If index > length, we push. If index < length, we replace?
+                        // Actually, simpler logic: The UI slots map to array indices 0-4.
+
+                        // Fill gaps with empty strings if needed (though we filter them out on save usually, but here we want stability)
+                        while (state.catalogData[realKitName].images.length < index) {
+                            state.catalogData[realKitName].images.push('');
+                        }
+
+                        state.catalogData[realKitName].images[index] = downloadURL;
+
+                        // Clean up nulls/empty only if we want compact array, but for UI stability maybe keeping them is fine?
+                        // No, let's keep it clean and re-render.
+                        state.catalogData[realKitName].images = state.catalogData[realKitName].images.filter(i => i);
+
+                        saveState().then(() => {
+                            renderCatalogModule();
+                            // alert("Imagen subida");
+                        });
                     });
                 }
             );
         }
 
         async function saveCatalogKit(kitName) {
-            const safeKitName = kitName.replace(/\s+/g, '_');
-            const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
-            const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
-            const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
+            const safeName = kitName.replace(/\s+/g, '_');
+            const description = document.getElementById(`catalog-desc-${safeName}`).value.trim();
+            const itemsText = document.getElementById(`catalog-items-${safeName}`).value.trim();
             const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
 
-            state.catalogData = state.catalogData || {};
-            state.catalogData[kitName] = { image, description, customItems };
+            // Images are already saved via uploadImage, but we ensure description is updated
+            state.catalogData[kitName] = state.catalogData[kitName] || {};
+            state.catalogData[kitName].description = description;
+            state.catalogData[kitName].customItems = customItems;
 
             try {
                 await saveState();
@@ -2055,85 +2127,89 @@
         }
 
         function updateUI() {
-            renderCatalogModule();
-            renderPendingOrders();
-            // Update Inventory Grid
-            const inventoryContainer = document.getElementById('inventory-container');
-            if (inventoryContainer) {
-                inventoryContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
-                    const data = state.inventoryData[id] || { name: id, unit: "uds", icon: "fa-box" };
-                    const hasImage = data.image && data.image.startsWith('http');
+            try {
+                renderCatalogModule();
+                renderPendingOrders();
+                // Update Inventory Grid
+                const inventoryContainer = document.getElementById('inventory-container');
+                if (inventoryContainer) {
+                    inventoryContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
+                        const data = state.inventoryData[id] || { name: id, unit: "uds", icon: "fa-box" };
+                        const hasImage = data.image && data.image.startsWith('http');
 
-                    return `
-                        <div class="inventory-card">
-                            <div class="card-actions">
-                                <button class="action-btn edit" onclick="editProduct('${id}')" title="Editar">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button class="action-btn delete" onclick="deleteProduct('${id}')" title="Eliminar">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                        return `
+                            <div class="inventory-card">
+                                <div class="card-actions">
+                                    <button class="action-btn edit" onclick="editProduct('${id}')" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="action-btn delete" onclick="deleteProduct('${id}')" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="card-img ${data.color ? 'color-' + data.color : ''}" ${hasImage ? `style="background-image: url('${data.image}'); background-size: cover; background-position: center;"` : ''}>
+                                    ${hasImage ? '' : `<i class="fa-solid ${data.icon}"></i>`}
+                                </div>
+                                <div class="card-title">${data.name}</div>
+                                <div class="card-qty-wrapper">
+                                    <span class="card-qty">${Number(qty).toFixed(2)}</span>
+                                    <span class="card-unit">${data.unit}</span>
+                                </div>
+                                <div class="card-controls">
+                                    <button class="control-btn minus" onclick="adjustStock('${id}', -1)">-</button>
+                                    <button class="control-btn plus" onclick="adjustStock('${id}', 1)">+</button>
+                                </div>
                             </div>
-                            <div class="card-img ${data.color ? 'color-' + data.color : ''}" ${hasImage ? `style="background-image: url('${data.image}'); background-size: cover; background-position: center;"` : ''}>
-                                ${hasImage ? '' : `<i class="fa-solid ${data.icon}"></i>`}
+                        `;
+                    }).join('');
+                }
+
+                // Update Kit Catalog
+                const catalogList = document.getElementById('kit-catalog-list');
+                if (catalogList) {
+                    catalogList.innerHTML = Object.entries(state.recipes).map(([name, recipe]) => `
+                        <div class="stock-item" style="flex-direction:column; align-items:flex-start; height:auto; padding:15px 0;">
+                            <div style="display:flex; justify-content:space-between; width:100%; font-weight:700; color:var(--highlight);">
+                                <span>${name}</span>
+                                <span>L ${recipe.price}</span>
                             </div>
-                            <div class="card-title">${data.name}</div>
-                            <div class="card-qty-wrapper">
-                                <span class="card-qty">${Number(qty).toFixed(2)}</span>
-                                <span class="card-unit">${data.unit}</span>
+                            <div style="font-size:11px; color:#64748b; margin-top:5px; text-align:left;">
+                                ${Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${state.inventoryData[k]?.name || k}: ${v}`).join(' | ')}
                             </div>
-                            <div class="card-controls">
-                                <button class="control-btn minus" onclick="adjustStock('${id}', -1)">-</button>
-                                <button class="control-btn plus" onclick="adjustStock('${id}', 1)">+</button>
+                            <div style="margin-top:8px; display:flex; gap:10px;">
+                                 <button onclick="editKit('${name}')" style="font-size:11px; color:#3b82f6; background:none; border:1px solid #3b82f6; border-radius:4px; padding:2px 8px; cursor:pointer;">Editar</button>
+                                 <button onclick="removeKit('${name}')" style="font-size:11px; color:#ef4444; background:none; border:1px solid #ef4444; border-radius:4px; padding:2px 8px; cursor:pointer;">Eliminar</button>
                             </div>
                         </div>
-                    `;
-                }).join('');
+                    `).join('');
+                }
+
+                // Update Sales Dropdown
+                const saleSelect = document.getElementById('sale-type');
+                if (saleSelect) {
+                    const currentVal = saleSelect.value;
+                    saleSelect.innerHTML = Object.keys(state.recipes).map(name => `
+                        <option value="${name}">${name}</option>
+                    `).join('');
+                    if (state.recipes[currentVal]) saleSelect.value = currentVal;
+                    else updateSalePrice();
+                }
+
+                // Update Histories
+                renderTable('purchase-history', state.purchases);
+                renderTable('sales-history', state.sales);
+                const totalProfitEl = document.getElementById('total-profit');
+                if (totalProfitEl) totalProfitEl.innerText = `L ${state.totalProfit.toFixed(2)}`;
+
+                // Update Analytics (Totals & Chart)
+                updateAnalytics();
+
+                // Sync Purchase Dropdown
+                updatePurchaseItems();
+            } catch (e) {
+                console.error("Error crítico en updateUI:", e);
+                alert("Error crítico en la aplicación: " + e.message);
             }
-
-            // Update Kit Catalog
-            const catalogList = document.getElementById('kit-catalog-list');
-            if (catalogList) {
-                catalogList.innerHTML = Object.entries(state.recipes).map(([name, recipe]) => `
-                    <div class="stock-item" style="flex-direction:column; align-items:flex-start; height:auto; padding:15px 0;">
-                        <div style="display:flex; justify-content:space-between; width:100%; font-weight:700; color:var(--highlight);">
-                            <span>${name}</span>
-                            <span>L ${recipe.price}</span>
-                        </div>
-                        <div style="font-size:11px; color:#64748b; margin-top:5px; text-align:left;">
-                            ${Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${state.inventoryData[k]?.name || k}: ${v}`).join(' | ')}
-                        </div>
-                        <div style="margin-top:8px; display:flex; gap:10px;">
-                             <button onclick="editKit('${name}')" style="font-size:11px; color:#3b82f6; background:none; border:1px solid #3b82f6; border-radius:4px; padding:2px 8px; cursor:pointer;">Editar</button>
-                             <button onclick="removeKit('${name}')" style="font-size:11px; color:#ef4444; background:none; border:1px solid #ef4444; border-radius:4px; padding:2px 8px; cursor:pointer;">Eliminar</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            // Update Sales Dropdown
-            const saleSelect = document.getElementById('sale-type');
-            if (saleSelect) {
-                const currentVal = saleSelect.value;
-                saleSelect.innerHTML = Object.keys(state.recipes).map(name => `
-                    <option value="${name}">${name}</option>
-                `).join('');
-                if (state.recipes[currentVal]) saleSelect.value = currentVal;
-                else updateSalePrice();
-            }
-
-            // Update Histories
-            renderTable('purchase-history', state.purchases);
-            renderTable('sales-history', state.sales);
-            const totalProfitEl = document.getElementById('total-profit');
-            if (totalProfitEl) totalProfitEl.innerText = `L ${state.totalProfit.toFixed(2)}`;
-
-            // Update Analytics (Totals & Chart)
-            updateAnalytics();
-
-            // Sync Purchase Dropdown
-            updatePurchaseItems();
-
         }
 
         function updateAnalytics() {
@@ -2642,10 +2718,47 @@
         function openFinancialModal() { /* Deprecated */ }
         function closeFinancialModal() { /* Deprecated */ }
 
+        // --- FINANCIAL DASHBOARD ---
         function renderFinancialDashboard() {
-            // Calculate
-            const totalIncome = state.sales.reduce((acc, s) => acc + ((s.price * (s.quantity || 1)) || 0), 0);
-            const totalExpenses = state.purchases.reduce((acc, p) => acc + (p.cost || 0), 0);
+            // Get Filters
+            const startDateStr = document.getElementById('fin-start-date')?.value;
+            const endDateStr = document.getElementById('fin-end-date')?.value;
+
+            // StartDate: set to beginning of day
+            const startDate = startDateStr ? new Date(startDateStr + "T00:00:00") : null;
+
+            // EndDate: set to end of day
+            const endDate = endDateStr ? new Date(endDateStr + "T23:59:59.999") : null;
+
+            // Filter Sales
+            let filteredSales = state.sales || [];
+            if (startDate || endDate) {
+                filteredSales = filteredSales.filter(s => {
+                    const d = parseDateHelper(s.date);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+            }
+
+            // Filter Purchases
+            let filteredPurchases = state.purchases || [];
+            if (startDate || endDate) {
+                filteredPurchases = filteredPurchases.filter(p => {
+                    const d = parseDateHelper(p.date); // Purchases might store dates differently too
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+            }
+
+            // Totals
+            // Note: Sales structure uses 'price' (total for item) and 'quantity'. Logic: acc + (s.price * qty).
+            // But wait, in existing code totalIncome was: acc + ((s.price * (s.quantity || 1)) || 0)
+            const totalIncome = filteredSales.reduce((acc, s) => acc + ((s.price * (s.quantity || 1)) || 0), 0);
+            const totalExpenses = filteredPurchases.reduce((acc, p) => acc + (p.cost || 0), 0);
             const balance = totalIncome - totalExpenses;
 
             // Render
@@ -2662,7 +2775,7 @@
             let margin = 0;
             if (totalIncome > 0) margin = ((balance / totalIncome) * 100).toFixed(1);
 
-            const avgTicket = state.sales.length > 0 ? (totalIncome / state.sales.length).toFixed(2) : "0.00";
+            const avgTicket = filteredSales.length > 0 ? (totalIncome / filteredSales.length).toFixed(2) : "0.00";
 
             if (document.getElementById('dash-margin')) document.getElementById('dash-margin').textContent = `${margin}%`;
             if (document.getElementById('dash-ticket')) document.getElementById('dash-ticket').textContent = `L ${avgTicket}`;
@@ -2681,6 +2794,205 @@
                     msgEl.style.color = '#dc2626';
                 }
                 if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-face-frown-open" style="color: #ef4444;"></i>';
+            }
+        }
+
+        function exportFinancialReportCSV() {
+            try {
+                const startDateStr = document.getElementById('fin-start-date')?.value || "";
+                const endDateStr = document.getElementById('fin-end-date')?.value || "";
+
+                // Re-run filter logic (duplicated for safety or we could store filtered state)
+                const startDate = startDateStr ? new Date(startDateStr + "T00:00:00") : null;
+                const endDate = endDateStr ? new Date(endDateStr + "T23:59:59.999") : null;
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "REPORTE FINANCIERO YESOS\n";
+                csvContent += `Periodo:,${startDateStr || "Inicio"} a ${endDateStr || "Actualidad"}\n\n`;
+
+                // Sales Section
+                csvContent += "VENTAS\n";
+                csvContent += "Fecha,Tipo,Items,Monto (L)\n";
+                const filteredSales = (state.sales || []).filter(s => {
+                    const d = parseDateHelper(s.date);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+                filteredSales.sort((a, b) => parseDateHelper(b.date) - parseDateHelper(a.date));
+
+                filteredSales.forEach(s => {
+                    // Safe check for items array
+                    const itemsArray = Array.isArray(s.items) ? s.items : [];
+                    const itemsStr = itemsArray.length > 0 ? itemsArray.map(i => `${i.qty}x ${i.name}`).join(' | ') : "N/A";
+
+                    const total = (s.price * (s.quantity || 1));
+                    // Escape quotes and commas in strings
+                    const safeType = (s.type || "").replace(/,/g, " ");
+                    const safeItems = (itemsStr || "").replace(/"/g, '""');
+                    csvContent += `${s.date},${safeType},"${safeItems}",${total.toFixed(2)}\n`;
+                });
+                const totalSales = filteredSales.reduce((a, b) => a + (b.price * (b.quantity || 1)), 0);
+                csvContent += `TOTAL VENTAS,,,${totalSales.toFixed(2)}\n\n`;
+
+                // Purchases Section
+                csvContent += "COMPRAS\n";
+                csvContent += "Fecha,Descripción,Monto (L)\n";
+                const filteredPurchases = (state.purchases || []).filter(p => {
+                    const d = parseDateHelper(p.date);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+                filteredPurchases.forEach(p => {
+                    // Safe item string
+                    const pItem = (state.inventoryData[p.item]?.name || p.item || 'Compra').replace(/,/g, " ");
+                    csvContent += `${p.date},"${pItem}",${(p.cost || 0).toFixed(2)}\n`;
+                });
+                const totalExpenses = filteredPurchases.reduce((a, b) => a + (b.cost || 0), 0);
+                csvContent += `TOTAL GASTOS,,${totalExpenses.toFixed(2)}\n\n`;
+
+                // Summary
+                csvContent += "RESUMEN\n";
+                csvContent += `Ingresos,${totalSales.toFixed(2)}\n`;
+                csvContent += `Egresos,${totalExpenses.toFixed(2)}\n`;
+                csvContent += `NETO,${(totalSales - totalExpenses).toFixed(2)}\n`;
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `reporte_financiero_${new Date().toISOString().slice(0, 10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                console.error(e);
+                alert("Error al exportar CSV: " + e.message);
+            }
+        }
+
+        function exportFinancialReportPDF() {
+            try {
+                const startDateStr = document.getElementById('fin-start-date')?.value || "";
+                const endDateStr = document.getElementById('fin-end-date')?.value || "";
+
+                // Re-run filter logic
+                const startDate = startDateStr ? new Date(startDateStr + "T00:00:00") : null;
+                const endDate = endDateStr ? new Date(endDateStr + "T23:59:59.999") : null;
+
+                const filteredSales = (state.sales || []).filter(s => {
+                    const d = parseDateHelper(s.date);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+                const totalSales = filteredSales.reduce((a, b) => a + (b.price * (b.quantity || 1)), 0);
+
+                const filteredPurchases = (state.purchases || []).filter(p => {
+                    const d = parseDateHelper(p.date);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (startDate && d < startDate) return false;
+                    if (endDate && d > endDate) return false;
+                    return true;
+                });
+                const totalExpenses = filteredPurchases.reduce((a, b) => a + (b.cost || 0), 0);
+                const netBalance = totalSales - totalExpenses;
+
+                // Generate Print View
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    alert("Por favor, permite ventanas emergentes para generar el reporte PDF.");
+                    return;
+                }
+
+                printWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Reporte Financiero - YESOS</title>
+                        <style>
+                            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+                            h1 { color: #3b82f6; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+                            .summary-box { display: flex; gap: 20px; margin: 30px 0; }
+                            .tile { padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; flex: 1; text-align: center; }
+                            .big { font-size: 24px; font-weight: bold; margin-top: 10px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                            th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                            th { background: #f8fafc; }
+                            .green { color: #059669; }
+                            .red { color: #dc2626; }
+                            .text-right { text-align: right; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Reporte Financiero</h1>
+                        <p><strong>Periodo:</strong> ${startDateStr || "Inicio"} - ${endDateStr || "Actualidad"}</p>
+                        <p><strong>Fecha de Generación:</strong> ${new Date().toLocaleString()}</p>
+
+                        <div class="summary-box">
+                            <div class="tile">
+                                <div>Ingresos</div>
+                                <div class="big green">L ${totalSales.toFixed(2)}</div>
+                            </div>
+                            <div class="tile">
+                                <div>Egresos</div>
+                                <div class="big red">L ${totalExpenses.toFixed(2)}</div>
+                            </div>
+                            <div class="tile">
+                                <div>Balance Neto</div>
+                                <div class="big" style="color: ${netBalance >= 0 ? '#059669' : '#dc2626'}">L ${netBalance.toFixed(2)}</div>
+                            </div>
+                        </div>
+
+                        <h3>Detalle de Ventas</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Fecha</th><th>Cliente / Detalle</th><th>Items</th><th class="text-right">Monto</th></tr>
+                            </thead>
+                            <tbody>
+                                ${filteredSales.map(s => {
+                    const itemsArr = Array.isArray(s.items) ? s.items : [];
+                    const itemsText = itemsArr.length > 0 ? itemsArr.map(i => `${i.qty}x ${i.name}`).join(' | ') : '-';
+                    return `
+                                    <tr>
+                                        <td>${s.date}</td>
+                                        <td>${s.type}</td>
+                                        <td>${itemsText}</td>
+                                        <td class="text-right">L ${(s.price * (s.quantity || 1)).toFixed(2)}</td>
+                                    </tr>
+                                    `;
+                }).join('')}
+                            </tbody>
+                        </table>
+
+                        <h3 style="margin-top: 40px;">Detalle de Gastos</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Fecha</th><th>Descripción</th><th class="text-right">Monto</th></tr>
+                            </thead>
+                            <tbody>
+                                ${filteredPurchases.map(p => `
+                                    <tr>
+                                        <td>${p.date}</td>
+                                        <td>${state.inventoryData[p.item]?.name || p.item || 'Gasto'}</td>
+                                        <td class="text-right">L ${(p.cost || 0).toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                // Wait for content to load then print
+                printWindow.onload = function () {
+                    printWindow.print();
+                };
+            } catch (e) {
+                console.error(e);
+                alert("Error al generar PDF: " + e.message);
             }
         }
 
@@ -2750,11 +3062,35 @@
         }
 
 
+
+        // Helper: Parse any date format (YYYY-MM-DD or DD/MM/YYYY)
+        // Helper: Parse any date format (YYYY-MM-DD or DD/MM/YYYY)
+        function parseDateHelper(dateStr) {
+            if (!dateStr) return null;
+            if (typeof dateStr !== 'string') return new Date(dateStr);
+
+            // Check if IS0 (YYYY-MM-DD)
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return new Date(dateStr + "T00:00:00");
+            }
+            // Check if Slash (DD/MM/YYYY or D/M/YYYY)
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    // Assume DD/MM/YYYY
+                    return new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
+                }
+            }
+            // Fallback
+            return new Date(dateStr);
+        }
+
         // Listen for changes in Kit Form
-        ['kit-figura-g', 'kit-figura-p', 'kit-roja', 'kit-amarilla', 'kit-azul', 'kit-pinceles', 'kit-paletas', 'kit-envases'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('input', updateKitStats);
-        });
+        ['kit-figura-g', 'kit-figura-p', 'kit-roja', 'kit-amarilla', 'kit-azul', 'kit-pinceles', 'kit-paletas',
+            'kit-envases'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', updateKitStats);
+            });
 
         /* --- NAVIGATION & MODES --- */
         const slides = document.querySelectorAll('.slide-container');
@@ -2805,6 +3141,7 @@
                 renderFinancialDashboard();
             }
 
+
             // Auto-hide sidebar on mobile after selection
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
@@ -2826,11 +3163,10 @@
                 sidebar.classList.toggle('active');
                 overlay.classList.toggle('active');
 
-                // Toggle icon
                 if (sidebar.classList.contains('active')) {
-                    icon.className = 'fa-solid fa-times'; // Close icon
+                    icon.className = 'fa-solid fa-times';
                 } else {
-                    icon.className = 'fa-solid fa-bars'; // Hamburger
+                    icon.className = 'fa-solid fa-bars';
                 }
             } else {
                 const isCollapsed = sidebar.classList.toggle('collapsed');
@@ -2848,18 +3184,23 @@
             });
         });
 
-
         /* --- INITIALIZATION --- */
         if (prevBtn) prevBtn.onclick = () => { if (currentSlide > 0) { currentSlide--; updateSlides(); } };
         if (nextBtn) nextBtn.onclick = () => { if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); } };
+
         document.onkeydown = (e) => {
             const presMode = document.getElementById('presentation-mode');
             if (!presMode || !presMode.classList.contains('active')) return;
-            if (e.key === 'ArrowRight' || e.key === ' ') { if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); } }
-            else if (e.key === 'ArrowLeft') { if (currentSlide > 0) { currentSlide--; updateSlides(); } }
+
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); }
+            } else if (e.key === 'ArrowLeft') {
+                if (currentSlide > 0) { currentSlide--; updateSlides(); }
+            }
         };
 
         updateSlides();
+
 
         // Robust Firebase SDK check
         const firebaseConfig = {
@@ -2872,12 +3213,20 @@
             measurementId: "G-7N653JJ4PG"
         };
 
+        let firebaseCheckAttempts = 0;
         function checkFirebase() {
             if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
                 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 initFirebase();
             } else {
-                setTimeout(checkFirebase, 100);
+                firebaseCheckAttempts++;
+                if (firebaseCheckAttempts > 50) { // 50 * 100ms = 5 seconds
+                    alert("Error crítico: Firebase SDK no ha cargado después de 5 segundos. Verifique su conexión a internet.");
+                    console.error("Firebase Timeout");
+                }
+                else {
+                    setTimeout(checkFirebase, 100);
+                }
             }
         }
         checkFirebase();

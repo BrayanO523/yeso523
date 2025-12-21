@@ -213,6 +213,7 @@
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
             padding-bottom: 10px;
@@ -702,225 +703,839 @@
         .toast.show {
             bottom: 30px;
         }
+
+        /* Carousel */
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #f1f5f9;
+        }
+
+        .carousel-wrapper {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+
+        .carousel-slide {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+            cursor: zoom-in;
+            animation: fadeEffect 0.3s;
+        }
+
+        .carousel-slide.active {
+            display: block;
+        }
+
+        @keyframes fadeEffect {
+            from {
+                opacity: 0.6;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .carousel-nav {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .nav-btn {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.8);
+            color: #1e293b;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-btn:hover {
+            background: white;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .thumbnails {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            overflow-x: auto;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            justify-content: center;
+            min-height: 70px;
+        }
+
+        .thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            cursor: pointer;
+            object-fit: cover;
+            opacity: 0.5;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            background: #f1f5f9;
+        }
+
+        .thumb:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .thumb.active {
+            opacity: 1;
+            border-color: #3b82f6;
+            transform: scale(1.05);
+        }
+
+        /* Lightbox */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100dvh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+        }
+
+        .lightbox.active {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        .lightbox-img {
+            max-width: 95%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2010;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lightbox-counter {
+            color: #94a3b8;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
     </style>
 </head>
 
 <body>
-
     <div class="header">
         <div class="header-container">
             <div class="logo"><i class="fa-solid fa-palette"></i><span>Kits de Yeso</span></div>
-            <div class="cart-icon" onclick="toggleCart()">
-                <i class="fa-solid fa-shopping-cart"></i>
-                <span class="cart-count" id="cart-count">0</span>
-            </div>
+            <div class="cart-icon" onclick="toggleCart()"><i class="fa-solid fa-shopping-cart"></i><span
+                    class="cart-count" id="cart-count">0</span></div>
         </div>
     </div>
-
     <div class="container">
         <h1 class="page-title">Nuestros Kits</h1>
         <p class="results-count" id="results-count">Cargando productos...</p>
         <div class="products-grid" id="products-grid"></div>
     </div>
-
-    <!-- Product Detail Modal -->
-    <div class="modal-overlay" id="product-modal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-times"></i></button>
-            <div class="modal-body">
-                <div>
-                    <div class="modal-image" id="modal-image">
-                        <i class="fa-solid fa-box-open"></i>
+    < !-- Product Detail Modal -->
+        <div class="modal-overlay" id="product-modal">
+            <div class="modal-content"><button class="modal-close" onclick="closeModal()"><i
+                        class="fa-solid fa-times"></i></button>
+                <div class="modal-body">
+                    <div>
+                        <div class="modal-image" id="modal-image"><i class="fa-solid fa-box-open"></i></div>
+                    </div>
+                    <div class="modal-details">
+                        <h2 id="modal-title">Nombre del Producto</h2>
+                        <div class="modal-price" id="modal-price">$ 0.00</div>
+                        <div class="modal-description" id="modal-description">Descripción del producto</div>
+                        <div class="quantity-section"><label>Cantidad: <span id="modal-stock-info"></span></label>
+                            <div class="quantity-controls"><button class="qty-btn"
+                                    onclick="updateModalQty(-1)">-</button><span class="qty-display"
+                                    id="modal-qty">1</span><button class="qty-btn"
+                                    onclick="updateModalQty(1)">+</button></div>
+                        </div>
+                        <div class="modal-actions"><button class="modal-btn btn-cart" id="modal-add-cart"
+                                onclick="addToCartFromModal()"><i class="fa-solid fa-cart-plus"></i>Agregar al carrito
+                            </button><button class="modal-btn btn-buy" id="modal-buy-now"
+                                onclick="buyNowFromModal()">Comprar ahora </button></div>
                     </div>
                 </div>
-                <div class="modal-details">
-                    <h2 id="modal-title">Nombre del Producto</h2>
-                    <div class="modal-price" id="modal-price">$ 0.00</div>
-                    <div class="modal-description" id="modal-description">Descripción del producto</div>
-                    <div class="quantity-section">
-                        <label>Cantidad: <span id="modal-stock-info"></span></label>
-                        <div class="quantity-controls">
-                            <button class="qty-btn" onclick="updateModalQty(-1)">-</button>
-                            <span class="qty-display" id="modal-qty">1</span>
-                            <button class="qty-btn" onclick="updateModalQty(1)">+</button>
+            </div>
+        </div>
+        < !-- Cart Sidebar -->
+            <div class="cart-sidebar" id="cart-sidebar">
+                <div class="cart-header">
+                    <h2>Carrito</h2><button class="close-cart" onclick="toggleCart()"><i
+                            class="fa-solid fa-times"></i></button>
+                </div>
+                <div class="cart-items" id="cart-items">
+                    <div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i>
+                        <p>Tu carrito está vacío</p>
+                    </div>
+                </div>
+                <div class="cart-footer">
+                    <div class="cart-total"><span>Total:</span><span id="cart-total">L 0.00</span></div><button
+                        class="checkout-btn" id="checkout-btn" onclick="processCheckout()" disabled>Realizar
+                        Pedido</button>
+                </div>
+            </div>
+            <div class="overlay" id="overlay" onclick="closeModals()"></div>
+            < !-- Customer Details Modal -->
+                <div class="modal-overlay" id="customer-details-modal">
+                    <div class="modal-content" style="max-width: 450px;"><button class="modal-close"
+                            onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
+                        <div class="modal-header" style="padding: 24px 24px 0 24px;">
+                            <h3 style="margin: 0; font-size: 20px; color: #1a1a1a;">Datos para el Pedido</h3>
+                        </div>
+                        <div class="modal-body" style="display: block; padding: 24px;">
+                            <p style="margin-bottom: 24px; color: #64748b; line-height: 1.5; font-size: 14px;">Por
+                                favor,
+                                ingresa tus datos para que podamos contactarte y coordinar la entrega. </p>
+                            <form id="customer-form" onsubmit="submitOrderWithDetails(event)">
+                                <div class="form-group" style="margin-bottom: 20px;"><label
+                                        style="display:block; margin-bottom:8px; font-weight:600; color:#334155; font-size:14px;">Nombre
+                                        Completo</label><input type="text" id="cust-name" required
+                                        placeholder="Ej: Juan Pérez"
+                                        style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; outline:none; transition:border-color 0.2s;"
+                                        onfocus="this.style.borderColor='#3b82f6'"
+                                        onblur="this.style.borderColor='#cbd5e1'"></div>
+                                <div class="form-group" style="margin-bottom: 24px;"><label
+                                        style="display:block; margin-bottom:8px; font-weight:600; color:#334155; font-size:14px;">Teléfono
+                                        / WhatsApp</label><input type="tel" id="cust-phone" required
+                                        placeholder="Ej: 9999-9999"
+                                        style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; outline:none; transition:border-color 0.2s;"
+                                        onfocus="this.style.borderColor='#3b82f6'"
+                                        onblur="this.style.borderColor='#cbd5e1'"></div><button type="submit"
+                                    class="checkout-btn"
+                                    style="width:100%; display:flex; justify-content:center; align-items:center; gap:8px;"><span>Continuar</span><i
+                                        class="fa-solid fa-arrow-right"></i></button>
+                            </form>
                         </div>
                     </div>
-                    <div class="modal-actions">
-                        <button class="modal-btn btn-cart" id="modal-add-cart" onclick="addToCartFromModal()">
-                            <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
-                        </button>
-                        <button class="modal-btn btn-buy" id="modal-buy-now" onclick="buyNowFromModal()">
-                            Comprar ahora
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cart Sidebar -->
-    <div class="cart-sidebar" id="cart-sidebar">
-        <div class="cart-header">
-            <h2>Carrito</h2>
-            <button class="close-cart" onclick="toggleCart()"><i class="fa-solid fa-times"></i></button>
-        </div>
-        <div class="cart-items" id="cart-items">
-            <div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i>
-                <p>Tu carrito está vacío</p>
-            </div>
-        </div>
-        <div class="cart-footer">
-            <div class="cart-total"><span>Total:</span><span id="cart-total">L 0.00</span></div>
-            <button class="checkout-btn" id="checkout-btn" onclick="processCheckout()" disabled>Realizar Pedido</button>
-        </div>
-    </div>
-
-    <div class="overlay" id="overlay" onclick="closeModals()"></div>
-
-    <!-- Customer Details Modal -->
-    <div class="modal-overlay" id="customer-details-modal">
-        <div class="modal-content" style="max-width: 450px;">
-            <button class="modal-close" onclick="closeModals()"><i class="fa-solid fa-times"></i></button>
-            <div class="modal-header" style="padding: 24px 24px 0 24px;">
-                <h3 style="margin: 0; font-size: 20px; color: #1a1a1a;">Datos para el Pedido</h3>
-            </div>
-            <div class="modal-body" style="display: block; padding: 24px;">
-                <p style="margin-bottom: 24px; color: #64748b; line-height: 1.5; font-size: 14px;">
-                    Por favor, ingresa tus datos para que podamos contactarte y coordinar la entrega.
-                </p>
-                <form id="customer-form" onsubmit="submitOrderWithDetails(event)">
-                    <div class="form-group" style="margin-bottom: 20px;">
-                        <label
-                            style="display:block; margin-bottom:8px; font-weight:600; color:#334155; font-size:14px;">Nombre
-                            Completo</label>
-                        <input type="text" id="cust-name" required placeholder="Ej: Juan Pérez"
-                            style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; outline:none; transition:border-color 0.2s;"
-                            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#cbd5e1'">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 24px;">
-                        <label
-                            style="display:block; margin-bottom:8px; font-weight:600; color:#334155; font-size:14px;">Teléfono
-                            / WhatsApp</label>
-                        <input type="tel" id="cust-phone" required placeholder="Ej: 9999-9999"
-                            style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; outline:none; transition:border-color 0.2s;"
-                            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#cbd5e1'">
-                    </div>
-                    <button type="submit" class="checkout-btn"
-                        style="width:100%; display:flex; justify-content:center; align-items:center; gap:8px;">
-                        <span>Continuar</span> <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    <div class="loading" id="loading"><i class="fa-solid fa-circle-notch"></i>
-        <p style="margin-top: 20px; color: #666;">Cargando catálogo...</p>
-    </div>
-    <div class="toast" id="toast">Mensaje</div>
-
-    <!-- Checkout Success Modal -->
-    <div class="modal-overlay" id="checkout-modal">
-        <div class="modal-content" style="max-width: 500px; text-align: center;">
-            <button class="modal-close" onclick="closeCheckoutModal()"><i class="fa-solid fa-times"></i></button>
-            <div class="modal-body" style="display: block; padding: 40px;">
-                <i class="fa-solid fa-circle-check" style="font-size: 60px; color: #10b981; margin-bottom: 20px;"></i>
-                <h2 style="margin-bottom: 15px;">¡Pedido Realizado!</h2>
-                <p style="margin-bottom: 30px; color: #666;">Para finalizar tu compra, por favor realiza el pago a una
-                    de las siguientes cuentas:</p>
-
-                <div
-                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
-                    <p style="margin-bottom: 10px;"><strong>Banco Atlántida:</strong> 0000000000 (Nombre)</p>
-                    <p><strong>Banco BAC:</strong> 0000000000 (Nombre)</p>
+                <div class="loading" id="loading"><i class="fa-solid fa-circle-notch"></i>
+                    <p style="margin-top: 20px; color: #666;">Cargando catálogo...</p>
                 </div>
+                <div class="toast" id="toast">Mensaje</div>
+                < !-- Checkout Success Modal -->
+                    <div class="modal-overlay" id="checkout-modal">
+                        <div class="modal-content" style="max-width: 500px; text-align: center;"><button
+                                class="modal-close" onclick="closeCheckoutModal()"><i
+                                    class="fa-solid fa-times"></i></button>
+                            <div class="modal-body" style="display: block; padding: 40px;"><i
+                                    class="fa-solid fa-circle-check"
+                                    style="font-size: 60px; color: #10b981; margin-bottom: 20px;"></i>
+                                <h2 style="margin-bottom: 15px;">¡Pedido Realizado !</h2>
+                                <p style="margin-bottom: 30px; color: #666;">Para finalizar tu compra,
+                                    por favor realiza el pago a una de las siguientes cuentas:</p>
+                                <div
+                                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: left;">
+                                    <p style="margin-bottom: 10px;"><strong>Banco Atlántida:</strong>0000000000 (Nombre)
+                                    </p>
+                                    <p><strong>Banco BAC:</strong>0000000000 (Nombre)</p>
+                                </div><a href="https://api.whatsapp.com/send?phone=50431713603" target="_blank"
+                                    class="modal-btn"
+                                    style="background: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; width: 100%; box-sizing: border-box;"><i
+                                        class="fa-brands fa-whatsapp" style="font-size: 24px;"></i>Confirmar pago com
+                                    WhatsApp </a>
+                            </div>
+                        </div>
+                    </div>
+                    <script>let db = null,
+                            state = {}
 
-                <a href="https://api.whatsapp.com/send?phone=50431713603" target="_blank" class="modal-btn"
-                    style="background: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; width: 100%; box-sizing: border-box;">
-                    <i class="fa-brands fa-whatsapp" style="font-size: 24px;"></i> Confirmar pago com WhatsApp
-                </a>
-            </div>
-        </div>
-    </div>
+                            ,
+                            cart = [],
+                            currentProduct = null,
+                            modalQty = 1;
 
-    <script>
-        let db = null, state = {}, cart = [], currentProduct = null, modalQty = 1;
+                        const firebaseConfig = {
+                            apiKey: "AIzaSyBKtBLWwgRgGtXeldzZZxqJQaiwZkQbB8k",
+                            authDomain: "yesos-836cd.firebaseapp.com",
+                            projectId: "yesos-836cd",
+                            storageBucket: "yesos-836cd.firebasestorage.app",
+                            messagingSenderId: "74266048840",
+                            appId: "1:74266048840:web:206b5e646230b956de9b7d",
+                            measurementId: "G-7N653JJ4PG"
+                        }
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKtBLWwgRgGtXeldzZZxqJQaiwZkQbB8k",
-            authDomain: "yesos-836cd.firebaseapp.com",
-            projectId: "yesos-836cd",
-            storageBucket: "yesos-836cd.firebasestorage.app",
-            messagingSenderId: "74266048840",
-            appId: "1:74266048840:web:206b5e646230b956de9b7d",
-            measurementId: "G-7N653JJ4PG"
-        };
+                            ;
 
-        function checkFirebase() {
-            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
-                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-                initApp();
+                        function checkFirebase() {
+                            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+                                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                                initApp();
+                            }
+
+                            else setTimeout(checkFirebase, 100);
+                        }
+
+                        checkFirebase();
+
+                        async function initApp() {
+                            try {
+                                db = firebase.firestore();
+                                await loadData();
+                                renderProducts();
+                                document.getElementById('loading').style.display = 'none';
+                            }
+
+                            catch (e) {
+                                console.error(e);
+                                alert("Error al cargar el catálogo");
+                            }
+                        }
+
+                        async function loadData() {
+                            const doc = await db.collection('config').doc('inventoryState').get();
+                            if (doc.exists) state = doc.data();
+                        }
+
+                        function getMaxStock(recipe) {
+                            let max = Infinity;
+
+                            for (const [item, required] of Object.entries(recipe)) {
+                                if (item === 'price') continue;
+                                const available = state.stock[item] || 0;
+                                const canMake = Math.floor(available / required);
+                                if (canMake < max) max = canMake;
+                            }
+
+                            return max === Infinity ? 0 : max;
+                        }
+
+                        function checkAvailability(recipe) {
+                            return getMaxStock(recipe) > 0;
+                        }
+
+                        function renderProducts() {
+                            const grid = document.getElementById('products-grid');
+
+                            const recipes = state.recipes || {}
+
+                                ;
+
+                            const catalog = state.catalogData || {}
+
+                                ;
+
+                            const count = Object.keys(recipes).length;
+
+                            document.getElementById('results-count').innerText = `$ {
+                count
             }
-            else setTimeout(checkFirebase, 100);
-        }
-        checkFirebase();
 
-        async function initApp() {
-            try {
-                db = firebase.firestore();
-                await loadData();
-                renderProducts();
-                document.getElementById('loading').style.display = 'none';
-            } catch (e) { console.error(e); alert("Error al cargar el catálogo"); }
-        }
-
-        async function loadData() {
-            const doc = await db.collection('config').doc('inventoryState').get();
-            if (doc.exists) state = doc.data();
-        }
-
-        function getMaxStock(recipe) {
-            let max = Infinity;
-            for (const [item, required] of Object.entries(recipe)) {
-                if (item === 'price') continue;
-                const available = state.stock[item] || 0;
-                const canMake = Math.floor(available / required);
-                if (canMake < max) max = canMake;
-            }
-            return max === Infinity ? 0 : max;
-        }
-
-        function checkAvailability(recipe) {
-            return getMaxStock(recipe) > 0;
-        }
-
-        function renderProducts() {
-            const grid = document.getElementById('products-grid');
-            const recipes = state.recipes || {};
-            const catalog = state.catalogData || {};
-
-            const count = Object.keys(recipes).length;
-            document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
-
-            if (count === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
-                return;
+            resultado$ {
+                count !==1 ? 's': ''
             }
 
-            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
-                const available = checkAvailability(recipe);
-                const info = catalog[name] || {};
+            `;
 
-                // Use custom description or fallback to auto-generated
-                const autoDesc = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
-                const displayDesc = info.description || autoDesc;
+                            if (count === 0) {
+                                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
+                                return;
+                            }
 
-                // Image handling
-                let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
-                if (info.image && info.image.startsWith('http')) {
-                    imgHtml = `<div class="product-image" style="background-image: url('${info.image}'); background-size: cover; background-position: center;">`;
-                }
+                            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
+                                const available = checkAvailability(recipe);
 
-                return `
+                                const info = catalog[name] || {}
+
+                                    ;
+
+                                // Use custom description or fallback to auto-generated
+                                const autoDesc = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `$ {
+                            v
+                        }
+
+                        $ {
+                            state.inventoryData?.[k]?.name || k
+                        }
+
+                        `).join(' • ');
+                                const displayDesc = info.description || autoDesc;
+
+                                // Image handling
+                                let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
+
+                                if (info.image && info.image.startsWith('http')) {
+                                    imgHtml = `<div class="product-image" style="background-image: url('${info.image}'); background-size: cover; background-position: center;" >`;
+                                }
+
+                                return ` <div class="product-card" onclick="openProductModal('${name}')" > $ {
+                        imgHtml
+                    }
+
+                    <div class="availability-badge ${!available ? 'out-of-stock' : ''}" >$ {
+                        available ? 'Disponible' : 'Agotado'
+                    }
+
+                    </div> </div> <div class="product-info" > <div class="product-name" >$ {
+                        name
+                    }
+
+                    </div> <div class="product-description" >$ {
+                        displayDesc
+                    }
+
+                    </div> <div class="price" >L $ {
+                        recipe.price
+                    }
+
+                    </div> </div> </div> `;
+                            }).join('');
+                        }
+
+                        function openProductModal(kitName) {
+                            currentProduct = kitName;
+                            const recipe = state.recipes[kitName];
+                            if (!recipe) return;
+
+                            const catalog = state.catalogData || {}
+
+                                ;
+
+                            const info = catalog[kitName] || {}
+
+                                ;
+
+                            const available = checkAvailability(recipe);
+
+                            // Custom items or fallback
+                            let itemsHtml = '';
+
+                            if (info.customItems && info.customItems.length > 0) {
+                                itemsHtml = info.customItems.map(i => `• $ {
+                        i
+                    }
+
+                    `).join('<br>');
+                            }
+
+                            else {
+                                itemsHtml = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `• $ {
+                        v
+                    }
+
+                    $ {
+                        state.inventoryData?.[k]?.name || k
+                    }
+
+                    `).join('<br>');
+                            }
+
+                            // Image
+                            const imgEl = document.getElementById('modal-image');
+
+                            if (info.image && info.image.startsWith('http')) {
+                                imgEl.innerHTML = '';
+                                imgEl.style.backgroundImage = `url('${info.image}')`;
+                                imgEl.style.backgroundSize = 'cover';
+                                imgEl.style.backgroundPosition = 'center';
+                            }
+
+                            else {
+                                imgEl.style.backgroundImage = '';
+                                imgEl.innerHTML = '<i class="fa-solid fa-box-open"></i>';
+                            }
+
+                            document.getElementById('modal-title').innerText = kitName;
+
+                            document.getElementById('modal-price').innerText = `L $ {
+                recipe.price
+            }
+
+            `;
+
+                            document.getElementById('modal-description').innerHTML = info.description ? `<p style="margin-bottom:15px;">$ {
+                info.description
+            }
+
+            </p><strong>Incluye:</strong><br>$ {
+                itemsHtml
+            }
+
+            ` : `<strong>Incluye:</strong><br>$ {
+                itemsHtml
+            }
+
+            `;
+
+                            const maxStock = getMaxStock(recipe);
+
+                            // Limit text
+                            const stockInfo = document.getElementById('modal-stock-info');
+
+                            if (maxStock > 0) {
+                                stockInfo.innerText = `(Disponibles: $ {
+                        maxStock
+                    })`;
+                                stockInfo.style.color = '#10b981';
+                            }
+
+                            else {
+                                stockInfo.innerText = '(Sin stock)';
+                                stockInfo.style.color = '#ef4444';
+                            }
+
+                            document.getElementById('modal-add-cart').disabled = maxStock === 0;
+                            document.getElementById('modal-buy-now').disabled = maxStock === 0;
+
+                            modalQty = 1;
+                            document.getElementById('modal-qty').innerText = modalQty;
+                            document.getElementById('modal-qty').dataset.max = maxStock; // Store max for validation
+
+                            document.getElementById('product-modal').classList.add('active');
+                            document.getElementById('overlay').classList.add('active');
+                        }
+
+                        function closeModal() {
+                            document.getElementById('product-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        function closeCheckoutModal() {
+                            document.getElementById('checkout-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        function closeCustomerModal() {
+                            document.getElementById('customer-details-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        function closeModals() {
+                            closeModal();
+                            closeCheckoutModal();
+                            closeCustomerModal();
+                            if (document.getElementById('cart-sidebar').classList.contains('open')) toggleCart();
+                        }
+
+                        function updateModalQty(delta) {
+                            const max = parseInt(document.getElementById('modal-qty').dataset.max || 1);
+                            let newQty = modalQty + delta;
+                            if (newQty < 1) newQty = 1;
+                            if (newQty > max) newQty = max;
+
+                            modalQty = newQty;
+                            document.getElementById('modal-qty').innerText = modalQty;
+                        }
+
+                        function addToCartFromModal() {
+                            const recipe = state.recipes[currentProduct];
+                            if (!recipe || !checkAvailability(recipe)) return;
+
+                            const existing = cart.find(item => item.name === currentProduct);
+                            if (existing) existing.quantity += modalQty;
+
+                            else cart.push({
+                                name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe
+                            });
+
+                            updateCart();
+
+                            showToast(`$ {
+                modalQty
+            }
+
+            $ {
+                currentProduct
+            }
+
+            agregado al carrito`);
+                            closeModal();
+                        }
+
+                        function buyNowFromModal() {
+                            addToCartFromModal();
+                            toggleCart();
+                        }
+
+                        function updateCart() {
+                            const cartItems = document.getElementById('cart-items');
+                            const cartCount = document.getElementById('cart-count');
+                            const cartTotal = document.getElementById('cart-total');
+                            const checkoutBtn = document.getElementById('checkout-btn');
+
+                            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+                            cartCount.innerText = totalItems;
+
+                            cartTotal.innerText = `L $ {
+                totalPrice.toFixed(2)
+            }
+
+            `;
+                            checkoutBtn.disabled = cart.length === 0;
+
+                            if (cart.length === 0) {
+                                cartItems.innerHTML = '<div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i><p>Tu carrito está vacío</p></div>';
+                            }
+
+                            else {
+                                cartItems.innerHTML = cart.map((item, index) => {
+                                    const catalog = (state.catalogData || {})[item.name] || {}
+
+                                        ;
+                                    const hasCustomImage = catalog.image && catalog.image.trim();
+                                    const imageStyle = hasCustomImage ? `background-image: url('${catalog.image}'); background-size: cover; background-position: center; ` : '';
+                                    const imageContent = hasCustomImage ? '' : '<i class="fa-solid fa-box-open"></i>';
+
+                                    return ` <div class="cart-item" > <div class="cart-item-image" style="${imageStyle}" >$ {
+                            imageContent
+                        }
+
+                        </div> <div class="cart-item-details" > <div class="cart-item-name" >$ {
+                            item.name
+                        }
+
+                        </div> <div class="cart-item-price" >L $ {
+                            item.price.toFixed(2)
+                        }
+
+                        </div> <div class="cart-qty-controls" > <button class="cart-qty-btn" onclick="updateQuantity(${index}, -1)" >-</button> <span>$ {
+                            item.quantity
+                        }
+
+                        </span> <button class="cart-qty-btn" onclick="updateQuantity(${index}, 1)" >+</button> </div> </div> </div> `
+                                }).join('');
+                            }
+                        }
+
+                        function updateQuantity(index, delta) {
+                            cart[index].quantity += delta;
+                            if (cart[index].quantity <= 0) cart.splice(index, 1);
+                            updateCart();
+                        }
+
+                        function toggleCart() {
+                            document.getElementById('cart-sidebar').classList.toggle('open');
+                            document.getElementById('overlay').classList.toggle('active');
+                        }
+
+                        async function processCheckout() {
+                            if (cart.length === 0) return;
+
+                            // 1. Calculate Total Ingredients Needed
+                            const totalCloud = {}
+
+                                ;
+
+                            for (const item of cart) {
+                                for (const [mat, qty] of Object.entries(item.recipe)) {
+                                    if (mat === 'price') continue;
+                                    totalCloud[mat] = (totalCloud[mat] || 0) + (qty * item.quantity);
+                                }
+                            }
+
+                            // 2. Compare against Stock
+                            for (const [mat, needed] of Object.entries(totalCloud)) {
+                                if ((state.stock[mat] || 0) < needed) {
+                                    alert(`Lo sentimos, no hay suficiente material ($ {
+                                state.inventoryData?.[mat]?.name || mat
+                            }) para completar todo el pedido.`);
+                                    return;
+                                }
+                            }
+
+                            // Open Customer Details Modal
+                            document.getElementById('customer-details-modal').classList.add('active');
+                            document.getElementById('overlay').classList.add('active');
+                            document.getElementById('cart-sidebar').classList.remove('open');
+                        }
+
+                        async function submitOrderWithDetails(e) {
+                            e.preventDefault();
+
+                            const customerName = document.getElementById('cust-name').value.trim();
+                            const customerPhone = document.getElementById('cust-phone').value.trim();
+
+                            if (!customerName || !customerPhone) return alert("Por favor completa todos los campos.");
+
+                            // Close inputs modal
+                            document.getElementById('customer-details-modal').classList.remove('active');
+
+                            const unitCosts = {
+                                figura_g: 10.42, figura_p: 3.47, t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522, pinceles: 4.00, paletas: 4.00, envases: 2.66
+                            }
+
+                                ;
+                            const orderId = Date.now().toString();
+                            const orderItems = [];
+                            let orderTotal = 0;
+                            let orderProfit = 0;
+
+                            for (const item of cart) {
+                                // Calculate Cost & Profit for TOTAL quantity
+                                let unitCost = 0;
+
+                                for (const [mat, qty] of Object.entries(item.recipe)) {
+                                    if (mat === 'price') continue;
+                                    unitCost += (unitCosts[mat] || 0) * qty;
+
+                                    // Deduct Stock
+                                    state.stock[mat] = Math.max(0, (state.stock[mat] || 0) - (qty * item.quantity));
+                                }
+
+                                const totalItemCost = unitCost * item.quantity;
+                                const totalItemPrice = item.price * item.quantity;
+                                const totalItemProfit = totalItemPrice - totalItemCost;
+
+                                orderItems.push({
+                                    name: item.name,
+                                    quantity: item.quantity,
+                                    price: item.price, // Unit price
+                                    recipe: item.recipe,
+                                    profit: parseFloat(totalItemProfit.toFixed(2))
+                                });
+
+                                orderTotal += totalItemPrice;
+                                orderProfit += totalItemProfit;
+                            }
+
+                            // Save to Pending Orders
+                            state.pendingOrders = state.pendingOrders || [];
+
+                            state.pendingOrders.push({
+                                id: orderId,
+                                date: new Date().toLocaleDateString(),
+                                timestamp: Date.now(),
+                                customer: customerName,
+                                phone: customerPhone,
+                                total: parseFloat(orderTotal.toFixed(2)),
+                                profit: parseFloat(orderProfit.toFixed(2)),
+                                items: orderItems,
+                                status: 'pending'
+                            });
+
+                            try {
+                                await db.collection('config').doc('inventoryState').set(state);
+
+                                // Success flow
+                                cart = [];
+                                updateCart();
+                                renderProducts();
+
+                                // Show success confirmation modal
+                                document.getElementById('checkout-modal').classList.add('active');
+                                // Overlay is already active from previous modal, keep it or re-add if needed
+                                document.getElementById('overlay').classList.add('active');
+
+                            }
+
+                            catch (e) {
+                                console.error(e);
+                                alert('Error al procesar el pedido. Intenta nuevamente.');
+                                document.getElementById('overlay').classList.remove('active');
+                            }
+                        }
+
+                        function showToast(msg) {
+                            const toast = document.getElementById('toast');
+                            toast.innerText = msg;
+                            toast.classList.add('show');
+                            setTimeout(() => toast.classList.remove('show'), 2000);
+                        }
+
+                    </script>
+                    <!-- Lightbox -->
+                    <div class="lightbox" id="lightbox">
+                        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+                        <img src="" class="lightbox-img" id="lightbox-img">
+                        <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+                    </div>
+
+                    <script>
+                        // Gallery State
+                        let currentImages = [];
+                        let currentSlideIndex = 0;
+
+
+                        function renderProducts() {
+                            const grid = document.getElementById('products-grid');
+                            const recipes = state.recipes || {};
+                            const catalog = state.catalogData || {};
+
+                            const count = Object.keys(recipes).length;
+                            document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
+
+                            if (count === 0) {
+                                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
+                                return;
+                            }
+
+                            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
+                                const available = checkAvailability(recipe);
+                                const info = catalog[name] || {};
+
+                                // Compatibility: Check images array or single image
+                                const images = info.images && info.images.length > 0 ? info.images : (info.image ? [info.image] : []);
+                                const mainImage = images.length > 0 ? images[0] : '';
+
+                                const autoDesc = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
+                                const displayDesc = info.description || autoDesc;
+
+                                let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
+                                if (mainImage && mainImage.startsWith('http')) {
+                                    imgHtml = `<div class="product-image" style="background-image: url('${mainImage}'); background-size: cover; background-position: center;">`;
+                                }
+
+                                return `
                     <div class="product-card" onclick="openProductModal('${name}')">
                         ${imgHtml}
                             <div class="availability-badge ${!available ? 'out-of-stock' : ''}">${available ? 'Disponible' : 'Agotado'}</div>
@@ -932,144 +1547,239 @@
                         </div>
                     </div>
                 `;
-            }).join('');
-        }
+                            }).join('');
+                        }
 
-        function openProductModal(kitName) {
-            currentProduct = kitName;
-            const recipe = state.recipes[kitName];
-            if (!recipe) return;
+                        function openProductModal(kitName) {
+                            currentProduct = kitName;
+                            const recipe = state.recipes[kitName];
+                            if (!recipe) return;
 
-            const catalog = state.catalogData || {};
-            const info = catalog[kitName] || {};
+                            const catalog = state.catalogData || {};
+                            const info = catalog[kitName] || {};
+                            const available = checkAvailability(recipe);
 
-            const available = checkAvailability(recipe);
+                            // Setup Images
+                            currentImages = info.images && info.images.length > 0 ? info.images : (info.image ? [info.image] : []);
+                            // Filter out empty strings just in case
+                            currentImages = currentImages.filter(img => img && img.startsWith('http'));
 
-            // Custom items or fallback
-            let itemsHtml = '';
-            if (info.customItems && info.customItems.length > 0) {
-                itemsHtml = info.customItems.map(i => `• ${i}`).join('<br>');
-            } else {
-                itemsHtml = Object.entries(recipe)
-                    .filter(([k]) => k !== 'price')
-                    .map(([k, v]) => `• ${v} ${state.inventoryData?.[k]?.name || k}`)
-                    .join('<br>');
-            }
+                            const modalImageContainer = document.getElementById('modal-image');
 
-            // Image
-            const imgEl = document.getElementById('modal-image');
-            if (info.image && info.image.startsWith('http')) {
-                imgEl.innerHTML = '';
-                imgEl.style.backgroundImage = `url('${info.image}')`;
-                imgEl.style.backgroundSize = 'cover';
-                imgEl.style.backgroundPosition = 'center';
-            } else {
-                imgEl.style.backgroundImage = '';
-                imgEl.innerHTML = '<i class="fa-solid fa-box-open"></i>';
-            }
+                            if (currentImages.length > 0) {
+                                // RENDER CAROUSEL
+                                const slidesHtml = currentImages.map((img, idx) =>
+                                    `<img src="${img}" class="carousel-slide" id="slide-${idx}" onclick="openLightbox(${idx})">`
+                                ).join('');
 
-            document.getElementById('modal-title').innerText = kitName;
-            document.getElementById('modal-price').innerText = `L ${recipe.price}`;
-            document.getElementById('modal-description').innerHTML = info.description ?
-                `<p style="margin-bottom:15px;">${info.description}</p><strong>Incluye:</strong><br>${itemsHtml}` :
-                `<strong>Incluye:</strong><br>${itemsHtml}`;
+                                const thumbsHtml = currentImages.length > 1 ? `
+                    <div class="thumbnails">
+                        ${currentImages.map((img, idx) =>
+                                    `<img src="${img}" class="thumb" id="thumb-${idx}" onclick="setSlide(${idx})">`
+                                ).join('')}
+                    </div>
+                ` : '';
 
-            const maxStock = getMaxStock(recipe);
+                                const navHtml = currentImages.length > 1 ? `
+                    <div class="carousel-nav">
+                        <button class="nav-btn" onclick="changeSlide(-1)">❮</button>
+                        <button class="nav-btn" onclick="changeSlide(1)">❯</button>
+                    </div>
+                ` : '';
 
-            // Limit text
-            const stockInfo = document.getElementById('modal-stock-info');
-            if (maxStock > 0) {
-                stockInfo.innerText = `(Disponibles: ${maxStock})`;
-                stockInfo.style.color = '#10b981';
-            } else {
-                stockInfo.innerText = '(Sin stock)';
-                stockInfo.style.color = '#ef4444';
-            }
+                                modalImageContainer.style.backgroundImage = 'none'; // Clear old style
+                                modalImageContainer.style.background = 'none'; // Clear gradient
+                                modalImageContainer.innerHTML = `
+                    <div class="carousel-container">
+                        <div class="carousel-wrapper">
+                            ${slidesHtml}
+                            ${navHtml}
+                        </div>
+                        ${thumbsHtml}
+                    </div>
+                `;
 
-            document.getElementById('modal-add-cart').disabled = maxStock === 0;
-            document.getElementById('modal-buy-now').disabled = maxStock === 0;
+                                setSlide(0);
 
-            modalQty = 1;
-            document.getElementById('modal-qty').innerText = modalQty;
-            document.getElementById('modal-qty').dataset.max = maxStock; // Store max for validation
+                            } else {
+                                // Fallback to Icon
+                                modalImageContainer.innerHTML = '<i class="fa-solid fa-box-open" style="font-size: 80px; color: #cbd5e1;"></i>';
+                                modalImageContainer.style.background = '#f8fafc';
+                                modalImageContainer.style.display = 'flex';
+                                modalImageContainer.style.alignItems = 'center';
+                                modalImageContainer.style.justifyContent = 'center';
+                            }
 
-            document.getElementById('product-modal').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
-        }
+                            // Items List
+                            let itemsHtml = '';
+                            if (info.customItems && info.customItems.length > 0) {
+                                itemsHtml = info.customItems.map(i => `• ${i}`).join('<br>');
+                            } else {
+                                itemsHtml = Object.entries(recipe)
+                                    .filter(([k]) => k !== 'price')
+                                    .map(([k, v]) => `• ${v} ${state.inventoryData?.[k]?.name || k}`)
+                                    .join('<br>');
+                            }
 
-        function closeModal() {
-            document.getElementById('product-modal').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
+                            document.getElementById('modal-title').innerText = kitName;
+                            document.getElementById('modal-price').innerText = `L ${recipe.price}`;
+                            document.getElementById('modal-description').innerHTML = info.description ?
+                                `<p style="margin-bottom:15px;">${info.description}</p><strong>Incluye:</strong><br>${itemsHtml}` :
+                                `<strong>Incluye:</strong><br>${itemsHtml}`;
 
-        function closeCheckoutModal() {
-            document.getElementById('checkout-modal').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
+                            const maxStock = getMaxStock(recipe);
+                            const stockInfo = document.getElementById('modal-stock-info');
 
-        function closeCustomerModal() {
-            document.getElementById('customer-details-modal').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
+                            if (maxStock > 0) {
+                                stockInfo.innerText = `(Disponibles: ${maxStock})`;
+                                stockInfo.style.color = '#10b981';
+                            } else {
+                                stockInfo.innerText = '(Sin stock)';
+                                stockInfo.style.color = '#ef4444';
+                            }
 
-        function closeModals() {
-            closeModal();
-            closeCheckoutModal();
-            closeCustomerModal();
-            if (document.getElementById('cart-sidebar').classList.contains('open')) toggleCart();
-        }
+                            document.getElementById('modal-add-cart').disabled = maxStock === 0;
+                            document.getElementById('modal-buy-now').disabled = maxStock === 0;
 
-        function updateModalQty(delta) {
-            const max = parseInt(document.getElementById('modal-qty').dataset.max || 1);
-            let newQty = modalQty + delta;
-            if (newQty < 1) newQty = 1;
-            if (newQty > max) newQty = max;
+                            modalQty = 1;
+                            document.getElementById('modal-qty').innerText = modalQty;
+                            document.getElementById('modal-qty').dataset.max = maxStock;
 
-            modalQty = newQty;
-            document.getElementById('modal-qty').innerText = modalQty;
-        }
+                            document.getElementById('product-modal').classList.add('active');
+                            document.getElementById('overlay').classList.add('active');
+                        }
 
-        function addToCartFromModal() {
-            const recipe = state.recipes[currentProduct];
-            if (!recipe || !checkAvailability(recipe)) return;
+                        // --- CAROUSEL FUNCTIONS ---
+                        function setSlide(index) {
+                            if (currentImages.length === 0) return;
 
-            const existing = cart.find(item => item.name === currentProduct);
-            if (existing) existing.quantity += modalQty;
-            else cart.push({ name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe });
+                            // Loop functionality
+                            if (index >= currentImages.length) index = 0;
+                            if (index < 0) index = currentImages.length - 1;
 
-            updateCart();
-            showToast(`${modalQty} ${currentProduct} agregado al carrito`);
-            closeModal();
-        }
+                            currentSlideIndex = index;
 
-        function buyNowFromModal() {
-            addToCartFromModal();
-            toggleCart();
-        }
+                            // Hide all slides
+                            document.querySelectorAll('.carousel-slide').forEach(el => el.classList.remove('active'));
+                            document.querySelectorAll('.thumb').forEach(el => el.classList.remove('active'));
 
-        function updateCart() {
-            const cartItems = document.getElementById('cart-items');
-            const cartCount = document.getElementById('cart-count');
-            const cartTotal = document.getElementById('cart-total');
-            const checkoutBtn = document.getElementById('checkout-btn');
+                            // Show current
+                            const currentSlide = document.getElementById(`slide-${index}`);
+                            const currentThumb = document.getElementById(`thumb-${index}`);
 
-            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                            if (currentSlide) currentSlide.classList.add('active');
+                            if (currentThumb) {
+                                currentThumb.classList.add('active');
+                                currentThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                            }
+                        }
 
-            cartCount.innerText = totalItems;
-            cartTotal.innerText = `L ${totalPrice.toFixed(2)}`;
-            checkoutBtn.disabled = cart.length === 0;
+                        function changeSlide(direction) {
+                            setSlide(currentSlideIndex + direction);
+                        }
 
-            if (cart.length === 0) {
-                cartItems.innerHTML = '<div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i><p>Tu carrito está vacío</p></div>';
-            } else {
-                cartItems.innerHTML = cart.map((item, index) => {
-                    const catalog = (state.catalogData || {})[item.name] || {};
-                    const hasCustomImage = catalog.image && catalog.image.trim();
-                    const imageStyle = hasCustomImage ? `background-image: url('${catalog.image}'); background-size: cover; background-position: center;` : '';
-                    const imageContent = hasCustomImage ? '' : '<i class="fa-solid fa-box-open"></i>';
+                        // --- LIGHTBOX FUNCTIONS ---
+                        function openLightbox(index) {
+                            if (!currentImages[index]) return;
+                            const lightbox = document.getElementById('lightbox');
+                            const img = document.getElementById('lightbox-img');
+                            const counter = document.getElementById('lightbox-counter');
 
-                    return `
+                            img.src = currentImages[index];
+                            counter.innerText = `${index + 1} / ${currentImages.length}`;
+
+                            lightbox.classList.add('active');
+
+                            // Simple tap to close or swipe? For now tap background closes.
+                            lightbox.onclick = (e) => {
+                                if (e.target === lightbox || e.target === img) closeLightbox();
+                            };
+                        }
+
+                        function closeLightbox() {
+                            const lightbox = document.getElementById('lightbox');
+                            lightbox.classList.remove('active');
+                            setTimeout(() => { document.getElementById('lightbox-img').src = ''; }, 300);
+                        }
+
+                        function closeModal() {
+                            document.getElementById('product-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        // ... (Keep existing functions: updateModalQty, addToCartFromModal, buyNowFromModal, updateCart, toggleCart, updateQuantity, closeCheckoutModal, closeCustomerModal, closeModals, processCheckout, submitOrderWithDetails, showToast)
+
+                        function closeCheckoutModal() {
+                            document.getElementById('checkout-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        function closeCustomerModal() {
+                            document.getElementById('customer-details-modal').classList.remove('active');
+                            document.getElementById('overlay').classList.remove('active');
+                        }
+
+                        function closeModals() {
+                            closeModal();
+                            closeCheckoutModal();
+                            closeCustomerModal();
+                            if (document.getElementById('cart-sidebar').classList.contains('open')) toggleCart();
+                        }
+
+                        function updateModalQty(delta) {
+                            const max = parseInt(document.getElementById('modal-qty').dataset.max || 1);
+                            let newQty = modalQty + delta;
+                            if (newQty < 1) newQty = 1;
+                            if (newQty > max) newQty = max;
+
+                            modalQty = newQty;
+                            document.getElementById('modal-qty').innerText = modalQty;
+                        }
+
+                        function addToCartFromModal() {
+                            const recipe = state.recipes[currentProduct];
+                            if (!recipe || !checkAvailability(recipe)) return;
+
+                            const existing = cart.find(item => item.name === currentProduct);
+                            if (existing) existing.quantity += modalQty;
+                            else cart.push({ name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe });
+
+                            updateCart();
+                            showToast(`${modalQty} ${currentProduct} agregado al carrito`);
+                            closeModal();
+                        }
+
+                        function buyNowFromModal() {
+                            addToCartFromModal();
+                            toggleCart();
+                        }
+
+                        function updateCart() {
+                            const cartItems = document.getElementById('cart-items');
+                            const cartCount = document.getElementById('cart-count');
+                            const cartTotal = document.getElementById('cart-total');
+                            const checkoutBtn = document.getElementById('checkout-btn');
+
+                            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+                            const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+                            cartCount.innerText = totalItems;
+                            cartTotal.innerText = `L ${totalPrice.toFixed(2)}`;
+                            checkoutBtn.disabled = cart.length === 0;
+
+                            if (cart.length === 0) {
+                                cartItems.innerHTML = '<div class="empty-cart"><i class="fa-solid fa-shopping-cart"></i><p>Tu carrito está vacío</p></div>';
+                            } else {
+                                cartItems.innerHTML = cart.map((item, index) => {
+                                    const catalog = (state.catalogData || {})[item.name] || {};
+                                    // Compatibility: handle single image or array
+                                    const images = catalog.images && catalog.images.length > 0 ? catalog.images : (catalog.image ? [catalog.image] : []);
+                                    const mainImage = images.length > 0 ? images[0] : '';
+
+                                    const imageStyle = mainImage ? `background-image: url('${mainImage}'); background-size: cover; background-position: center;` : '';
+                                    const imageContent = mainImage ? '' : '<i class="fa-solid fa-box-open"></i>';
+
+                                    return `
                     <div class="cart-item">
                         <div class="cart-item-image" style="${imageStyle}">${imageContent}</div>
                         <div class="cart-item-details">
@@ -1083,132 +1793,131 @@
                         </div>
                     </div>
                 `}).join('');
-            }
-        }
+                            }
+                        }
 
-        function updateQuantity(index, delta) {
-            cart[index].quantity += delta;
-            if (cart[index].quantity <= 0) cart.splice(index, 1);
-            updateCart();
-        }
+                        function updateQuantity(index, delta) {
+                            cart[index].quantity += delta;
+                            if (cart[index].quantity <= 0) cart.splice(index, 1);
+                            updateCart();
+                        }
 
-        function toggleCart() {
-            document.getElementById('cart-sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('active');
-        }
+                        function toggleCart() {
+                            document.getElementById('cart-sidebar').classList.toggle('open');
+                            document.getElementById('overlay').classList.toggle('active');
+                        }
 
-        async function processCheckout() {
-            if (cart.length === 0) return;
+                        async function processCheckout() {
+                            if (cart.length === 0) return;
 
-            // 1. Calculate Total Ingredients Needed
-            const totalCloud = {};
-            for (const item of cart) {
-                for (const [mat, qty] of Object.entries(item.recipe)) {
-                    if (mat === 'price') continue;
-                    totalCloud[mat] = (totalCloud[mat] || 0) + (qty * item.quantity);
-                }
-            }
+                            // 1. Calculate Total Ingredients Needed
+                            const totalCloud = {};
+                            for (const item of cart) {
+                                for (const [mat, qty] of Object.entries(item.recipe)) {
+                                    if (mat === 'price') continue;
+                                    totalCloud[mat] = (totalCloud[mat] || 0) + (qty * item.quantity);
+                                }
+                            }
 
-            // 2. Compare against Stock
-            for (const [mat, needed] of Object.entries(totalCloud)) {
-                if ((state.stock[mat] || 0) < needed) {
-                    alert(`Lo sentimos, no hay suficiente material (${state.inventoryData?.[mat]?.name || mat}) para completar todo el pedido.`);
-                    return;
-                }
-            }
+                            // 2. Compare against Stock
+                            for (const [mat, needed] of Object.entries(totalCloud)) {
+                                if ((state.stock[mat] || 0) < needed) {
+                                    alert(`Lo sentimos, no hay suficiente material (${state.inventoryData?.[mat]?.name || mat}) para completar todo el pedido.`);
+                                    return;
+                                }
+                            }
 
-            // Open Customer Details Modal
-            document.getElementById('customer-details-modal').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
-            document.getElementById('cart-sidebar').classList.remove('open');
-        }
+                            // Open Customer Details Modal
+                            document.getElementById('customer-details-modal').classList.add('active');
+                            document.getElementById('overlay').classList.add('active');
+                            document.getElementById('cart-sidebar').classList.remove('open');
+                        }
 
-        async function submitOrderWithDetails(e) {
-            e.preventDefault();
+                        async function submitOrderWithDetails(e) {
+                            e.preventDefault();
 
-            const customerName = document.getElementById('cust-name').value.trim();
-            const customerPhone = document.getElementById('cust-phone').value.trim();
+                            const customerName = document.getElementById('cust-name').value.trim();
+                            const customerPhone = document.getElementById('cust-phone').value.trim();
 
-            if (!customerName || !customerPhone) return alert("Por favor completa todos los campos.");
+                            if (!customerName || !customerPhone) return alert("Por favor completa todos los campos.");
 
-            // Close inputs modal
-            document.getElementById('customer-details-modal').classList.remove('active');
+                            // Close inputs modal
+                            document.getElementById('customer-details-modal').classList.remove('active');
 
-            const unitCosts = { figura_g: 10.42, figura_p: 3.47, t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522, pinceles: 4.00, paletas: 4.00, envases: 2.66 };
-            const orderId = Date.now().toString();
-            const orderItems = [];
-            let orderTotal = 0;
-            let orderProfit = 0;
+                            const unitCosts = { figura_g: 10.42, figura_p: 3.47, t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522, pinceles: 4.00, paletas: 4.00, envases: 2.66 };
+                            const orderId = Date.now().toString();
+                            const orderItems = [];
+                            let orderTotal = 0;
+                            let orderProfit = 0;
 
-            for (const item of cart) {
-                // Calculate Cost & Profit for TOTAL quantity
-                let unitCost = 0;
-                for (const [mat, qty] of Object.entries(item.recipe)) {
-                    if (mat === 'price') continue;
-                    unitCost += (unitCosts[mat] || 0) * qty;
+                            for (const item of cart) {
+                                // Calculate Cost & Profit for TOTAL quantity
+                                let unitCost = 0;
+                                for (const [mat, qty] of Object.entries(item.recipe)) {
+                                    if (mat === 'price') continue;
+                                    unitCost += (unitCosts[mat] || 0) * qty;
 
-                    // Deduct Stock
-                    state.stock[mat] = Math.max(0, (state.stock[mat] || 0) - (qty * item.quantity));
-                }
+                                    // Deduct Stock
+                                    state.stock[mat] = Math.max(0, (state.stock[mat] || 0) - (qty * item.quantity));
+                                }
 
-                const totalItemCost = unitCost * item.quantity;
-                const totalItemPrice = item.price * item.quantity;
-                const totalItemProfit = totalItemPrice - totalItemCost;
+                                const totalItemCost = unitCost * item.quantity;
+                                const totalItemPrice = item.price * item.quantity;
+                                const totalItemProfit = totalItemPrice - totalItemCost;
 
-                orderItems.push({
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price, // Unit price
-                    recipe: item.recipe,
-                    profit: parseFloat(totalItemProfit.toFixed(2))
-                });
+                                orderItems.push({
+                                    name: item.name,
+                                    quantity: item.quantity,
+                                    price: item.price, // Unit price
+                                    recipe: item.recipe,
+                                    profit: parseFloat(totalItemProfit.toFixed(2))
+                                });
 
-                orderTotal += totalItemPrice;
-                orderProfit += totalItemProfit;
-            }
+                                orderTotal += totalItemPrice;
+                                orderProfit += totalItemProfit;
+                            }
 
-            // Save to Pending Orders
-            state.pendingOrders = state.pendingOrders || [];
-            state.pendingOrders.push({
-                id: orderId,
-                date: new Date().toLocaleDateString(),
-                timestamp: Date.now(),
-                customer: customerName,
-                phone: customerPhone,
-                total: parseFloat(orderTotal.toFixed(2)),
-                profit: parseFloat(orderProfit.toFixed(2)),
-                items: orderItems,
-                status: 'pending'
-            });
+                            // Save to Pending Orders
+                            state.pendingOrders = state.pendingOrders || [];
+                            state.pendingOrders.push({
+                                id: orderId,
+                                date: new Date().toLocaleDateString(),
+                                timestamp: Date.now(),
+                                customer: customerName,
+                                phone: customerPhone,
+                                total: parseFloat(orderTotal.toFixed(2)),
+                                profit: parseFloat(orderProfit.toFixed(2)),
+                                items: orderItems,
+                                status: 'pending'
+                            });
 
-            try {
-                await db.collection('config').doc('inventoryState').set(state);
+                            try {
+                                await db.collection('config').doc('inventoryState').set(state);
 
-                // Success flow
-                cart = [];
-                updateCart();
-                renderProducts();
+                                // Success flow
+                                cart = [];
+                                updateCart();
+                                renderProducts();
 
-                // Show success confirmation modal
-                document.getElementById('checkout-modal').classList.add('active');
-                // Overlay is already active from previous modal, keep it or re-add if needed
-                document.getElementById('overlay').classList.add('active');
+                                // Show success confirmation modal
+                                document.getElementById('checkout-modal').classList.add('active');
+                                // Overlay is already active from previous modal, keep it or re-add if needed
+                                document.getElementById('overlay').classList.add('active');
 
-            } catch (e) {
-                console.error(e);
-                alert('Error al procesar el pedido. Intenta nuevamente.');
-                document.getElementById('overlay').classList.remove('active');
-            }
-        }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error al procesar el pedido. Intenta nuevamente.');
+                                document.getElementById('overlay').classList.remove('active');
+                            }
+                        }
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-    </script>
-
+                        function showToast(msg) {
+                            const toast = document.getElementById('toast');
+                            toast.innerText = msg;
+                            toast.classList.add('show');
+                            setTimeout(() => toast.classList.remove('show'), 2000);
+                        }
+                    </script>
 </body>
 
 </html>
