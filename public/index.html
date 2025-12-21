@@ -1360,6 +1360,49 @@
                     </div>
                 </div>
 
+                <!-- Product Entry Module (New) -->
+                <div id="product-entry-module" class="admin-module">
+                    <h2 class="slide-title">Ingreso de Producto Individual</h2>
+                    <div class="tile">
+                        <form id="single-product-form" onsubmit="saveSingleProduct(event)" class="admin-form">
+                            <div class="form-group">
+                                <label>Nombre del Producto</label>
+                                <input type="text" id="single-name" placeholder="Ej: Batman Grande" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo Base (Inventario)</label>
+                                <select id="single-type">
+                                    <option value="figura_g">Figura Grande</option>
+                                    <option value="figura_p">Figura Pequeña</option>
+                                    <option value="t_roja">Pintura Roja</option>
+                                    <option value="t_amarilla">Pintura Amarilla</option>
+                                    <option value="t_azul">Pintura Azul</option>
+                                    <option value="pinceles">Pinceles</option>
+                                    <option value="paletas">Paletas</option>
+                                    <option value="envases">Envases</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Categoría</label>
+                                <select id="single-category" onchange="toggleNewCategoryInput()">
+                                    <!-- Dynamic -->
+                                </select>
+                                <input type="text" id="new-category-input" placeholder="Nueva Categoría..."
+                                    style="display:none; margin-top:5px; border:1px solid #3b82f6;">
+                            </div>
+                            <div class="form-group">
+                                <label>Cantidad (Stock)</label>
+                                <input type="number" id="single-qty" value="1" min="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Precio de Venta (L)</label>
+                                <input type="number" id="single-price" step="0.01" required>
+                            </div>
+                            <button type="submit" class="primary-btn">Guardar Producto</button>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Purchases Module -->
                 <div id="purchases-module" class="admin-module">
                     <h2 class="slide-title">Registro de Compras</h2>
@@ -1596,6 +1639,58 @@
                     <p style="margin-bottom:20px; color:#64748b;">Aquí puedes agregar fotos y descripciones para la
                         página de ventas.</p>
                     <div id="catalog-kits-list"></div>
+                </div>
+
+                <!-- Product Entry Module (Single Item) -->
+                <div id="product-entry-module" class="admin-module">
+                    <h2 class="slide-title">Ingreso Rápido de Producto</h2>
+                    <p style="color:#64748b; margin-bottom:20px;">Crea productos individuales (Figuras, Pinturas) sin
+                        complicaciones.</p>
+
+                    <div class="tile highlight" style="max-width: 600px;">
+                        <form id="single-product-form" class="admin-form" onsubmit="saveSingleProduct(event)">
+                            <div class="form-group">
+                                <label>Nombre del Producto</label>
+                                <input type="text" id="single-name" placeholder="Ej: Figura Batman Grande" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tipo de Producto (Inventario Base)</label>
+                                <select id="single-type" required>
+                                    <option value="figura_g">Figura GRANDE</option>
+                                    <option value="figura_p">Figura PEQUEÑA</option>
+                                    <option value="pintura">Pintura (ml)</option>
+                                    <option value="pinceles">Pincel</option>
+                                    <option value="paletas">Paleta</option>
+                                    <option value="envases">Envase</option>
+                                </select>
+                                <p style="font-size:12px; color:#94a3b8;">Esto define qué stock se descuenta al vender.
+                                </p>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Categoría</label>
+                                <select id="single-category" onchange="toggleNewCategoryInput()" required>
+                                    <!-- Dynamic Options populated by JS -->
+                                </select>
+                                <input type="text" id="new-category-input" placeholder="Escribe la nueva categoría..."
+                                    style="display: none; margin-top: 10px; border-color: #3b82f6;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Cantidad (Unidades/ml)</label>
+                                <input type="number" id="single-qty" value="1" step="any" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Precio de Venta (L)</label>
+                                <input type="number" id="single-price" placeholder="0.00" step="0.01" required>
+                            </div>
+
+                            <button type="submit" class="primary-btn" style="margin-top: 10px;">Guardar
+                                Producto</button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Sales Module -->
@@ -2456,6 +2551,87 @@
             };
         }
 
+        // --- INGRESO PRODUCTO (SINGLE ITEM) ---
+        function getUniqueCategories() {
+            const defaults = ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas', 'Otros'];
+            const used = Object.values(state.catalogData || {}).map(c => c.category).filter(Boolean);
+            return [...new Set([...defaults, ...used])];
+        }
+
+        function renderProductEntryModule() {
+            const select = document.getElementById('single-category');
+            if (!select) return;
+
+            const categories = getUniqueCategories();
+            let html = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            html += `<option value="otroc">Otro...</option>`; // Special value for trigger
+
+            select.innerHTML = html;
+            select.value = categories[0]; // Default select first
+            toggleNewCategoryInput();
+        }
+
+        function toggleNewCategoryInput() {
+            const select = document.getElementById('single-category');
+            const input = document.getElementById('new-category-input');
+            if (select.value === 'otroc') {
+                input.style.display = 'block';
+                input.required = true;
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.required = false;
+            }
+        }
+
+        function saveSingleProduct(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('single-name').value.trim();
+            const type = document.getElementById('single-type').value;
+            let category = document.getElementById('single-category').value;
+            const newCategory = document.getElementById('new-category-input').value.trim();
+            const qty = parseFloat(document.getElementById('single-qty').value);
+            const price = parseFloat(document.getElementById('single-price').value);
+
+            if (!name || !price) return alert("Completa los campos obligatorios");
+
+            // Handle "Other" category
+            if (category === 'otroc') {
+                if (!newCategory) return alert("Escribe el nombre de la nueva categoría");
+                category = newCategory; // Use the custom input
+            }
+
+            if (state.recipes[name]) {
+                if (!confirm("Ya existe un producto con este nombre. ¿Sobreescribir?")) return;
+            }
+
+            // Create simple recipe
+            const recipe = {
+                price: price
+            };
+            recipe[type] = qty; // Dynamic base ingredient
+
+            state.recipes[name] = recipe;
+
+            // Save catalog info
+            state.catalogData = state.catalogData || {};
+            state.catalogData[name] = {
+                description: '', // Can be edited later
+                images: [],
+                customItems: [],
+                category: category
+            };
+
+            saveState();
+            alert("Producto guardado exitosamente!");
+
+            // Reset form
+            document.getElementById('single-product-form').reset();
+            renderProductEntryModule(); // Re-render to see new category in list if added
+            renderCatalogModule(); // Update catalog list incase category changed
+        }
+
         const newProductForm = document.getElementById('new-product-form');
         if (newProductForm) {
             newProductForm.onsubmit = (e) => {
@@ -3260,6 +3436,66 @@
         }
         checkFirebase();
 
+        // --- NAVIGATION ---
+        function showModule(modName) {
+            // Mode Switching Logic
+            const presMode = document.getElementById('presentation-mode');
+            const adminMode = document.getElementById('admin-mode');
+
+            if (modName === 'presentation') {
+                if (presMode) presMode.classList.add('active');
+                if (adminMode) adminMode.classList.remove('active');
+
+                // Reset sidebar active states
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                const navBtn = document.getElementById('btn-presentation');
+                if (navBtn) navBtn.classList.add('active');
+                return; // Stop here, no module logic needed
+            } else {
+                // Determine if we need to switch TO admin mode
+                if (presMode && presMode.classList.contains('active')) {
+                    presMode.classList.remove('active');
+                }
+                if (adminMode && !adminMode.classList.contains('active')) {
+                    adminMode.classList.add('active');
+                }
+            }
+
+            // Hide all admin modules
+            document.querySelectorAll('.admin-module').forEach(el => el.classList.remove('active'));
+
+            // Show target module
+            const target = document.getElementById(modName + '-module');
+            if (target) {
+                target.classList.add('active');
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            // Update Sidebar
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const navBtn = document.getElementById('btn-' + modName);
+            if (navBtn) navBtn.classList.add('active');
+
+            // Module Specific Logic
+            if (modName === 'financial') {
+                renderFinancialDashboard();
+            }
+            if (modName === 'product-entry') {
+                renderProductEntryModule();
+            }
+            if (modName === 'orders') {
+                renderTable('pending-orders', state.pendingOrders);
+            }
+
+            // Mobile: Close sidebar if open
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    toggleMobileSidebar();
+                }
+            }
+        }
     </script>
 </body>
 

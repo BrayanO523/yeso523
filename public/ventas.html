@@ -1098,31 +1098,41 @@
                 return;
             }
 
-            // Group by Category
-            const grouped = {
-                'Kits': [],
-                'Figuras Grandes': [],
-                'Figuras Medianas': [],
-                'Figuras Pequeñas': [],
-                'Otros': []
-            };
+            // Dynamic Grouping
+            const grouped = {};
+            const defaultOrder = ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas', 'Otros'];
+
+            // Initialize defaults to preserve order if they exist/are used, but don't force empty sections unless desired?
+            // Actually, better to just group what exists.
 
             Object.entries(recipes).forEach(([name, recipe]) => {
                 const info = catalog[name] || {};
                 const cat = info.category || 'Otros';
-                if (grouped[cat]) grouped[cat].push({ name, recipe, info });
-                else grouped['Otros'].push({ name, recipe, info }); // Fallback
+                if (!grouped[cat]) grouped[cat] = [];
+                grouped[cat].push({ name, recipe, info });
             });
+
+            let categoriesToShow = [];
+            if (currentCategory === 'all') {
+                // Get all categories found
+                const foundCats = Object.keys(grouped);
+                // Sort by defaultOrder, then others
+                categoriesToShow = foundCats.sort((a, b) => {
+                    const idxA = defaultOrder.indexOf(a);
+                    const idxB = defaultOrder.indexOf(b);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+            } else {
+                categoriesToShow = [currentCategory];
+            }
 
             let html = '';
 
-            // Categories to show
-            const categoriesToShow = currentCategory === 'all'
-                ? ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas', 'Otros']
-                : [currentCategory];
-
             categoriesToShow.forEach(cat => {
-                const products = grouped[cat];
+                const products = grouped[cat] || [];
                 if (products.length === 0) return;
 
                 html += `
@@ -1143,16 +1153,21 @@
 
                     // Image handling
                     let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
-                    if (info.image && info.image.startsWith('http')) {
+                    if (info.images && info.images.length > 0 && info.images[0]) {
+                        // Use first image
+                        imgHtml = `<div class="product-image" style="background-image: url('${info.images[0]}'); background-size: cover; background-position: center;">`;
+                    } else if (info.image && info.image.startsWith('http')) {
+                        // Backward compat
                         imgHtml = `<div class="product-image" style="background-image: url('${info.image}'); background-size: cover; background-position: center;">`;
                     }
 
                     html += `
                         <div class="product-card" onclick="openProductModal('${name}')">
                             ${imgHtml}
-                            <div class="availability-badge ${!available ? 'out-of-stock' : ''}">
-                                ${available ? 'Disponible' : 'Agotado'}
-                            </div>
+                            ${!available ? '<div class="availability-badge out-of-stock">Agotado</div>' : '<div class="availability-badge">Disponible</div>'}
+                            
+                            </div> 
+                            
                             <div class="product-info">
                                 <div class="product-name">${name}</div>
                                 <div class="product-description">${displayDesc}</div>
