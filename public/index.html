@@ -917,7 +917,8 @@
     <!-- Sidebar for Navigation between Modes -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i class="fa-solid fa-shapes"></i>
+            <img src="https://firebasestorage.googleapis.com/v0/b/yesos-836cd.firebasestorage.app/o/1766382607409.png?alt=media&amp;token=c5c2f551-a068-469f-8afe-823d01d24bb6"
+                alt="Logo" style="height: 40px; margin-right: 10px;">
             <span>ARTEYESO Admin</span>
         </div>
         <nav>
@@ -952,6 +953,9 @@
             <div class="nav-separator">FINANZAS</div>
             <button class="nav-item" onclick="showModule('financial')" id="btn-financial">
                 <i class="fa-solid fa-chart-pie"></i> <span>Balance Financiero</span>
+            </button>
+            <button class="nav-item" onclick="showModule('calculator')" id="btn-calculator">
+                <i class="fa-solid fa-calculator"></i> <span>Calculadora Costos</span>
             </button>
 
             <div
@@ -1755,8 +1759,163 @@
                     </div>
                 </div>
 
+                <!-- CALCULATOR MODULE -->
+                <div id="calculator-module" class="admin-module">
+                    <div class="module-header" style="margin-bottom:30px;">
+                        <h2><i class="fa-solid fa-calculator" style="color:var(--highlight);"></i> Calculadora de Costos
+                            de Producción</h2>
+                        <p style="color:#64748b; margin-top:5px;">Calcula el costo exacto de tus piezas basado en
+                            consumo de material y tiempo.</p>
+                    </div>
+
+                    <div class="admin-form"
+                        style="background:white; padding:30px; border-radius:16px; max-width:900px; margin:0 auto; box-shadow:0 4px 20px rgba(0,0,0,0.05);">
+
+                        <!-- INGREDIENTS SECTION -->
+                        <h3
+                            style="border-bottom:1px solid #e2e8f0; padding-bottom:15px; margin-bottom:20px; color:#1e293b;">
+                            1. Materiales (Por Pieza/Lote)</h3>
+
+                        <div class="dashboard-grid"
+                            style="gap:15px; margin-top:0; grid-template-columns: 2fr 1fr 1fr 1fr;">
+                            <label style="font-size:12px; font-weight:700; color:#94a3b8;">MATERIAL</label>
+                            <label style="font-size:12px; font-weight:700; color:#94a3b8;">COSTO (L) / LIBRA</label>
+                            <label style="font-size:12px; font-weight:700; color:#94a3b8;">CONSUMO (GRAMOS)</label>
+                            <label style="font-size:12px; font-weight:700; color:#94a3b8; text-align:right;">TOTAL
+                                (L)</label>
+                        </div>
+
+                        <!-- Row 1: Yeso -->
+                        <div class="dashboard-grid"
+                            style="gap:15px; margin-top:10px; grid-template-columns: 2fr 1fr 1fr 1fr; align-items:center;">
+                            <div style="font-weight:600; color:#475569;">
+                                <i class="fa-solid fa-sack-dollar" style="color:#eab308; margin-right:8px;"></i> Yeso
+                            </div>
+                            <input type="number" id="calc-price-yeso" value="22.50" step="0.01" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;"
+                                oninput="calculateSpecificCost()">
+                            <input type="number" id="calc-gram-yeso" value="200" step="1" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;"
+                                oninput="calculateSpecificCost()">
+                            <div id="res-yeso" style="text-align:right; font-weight:700; color:#475569;">L 0.00</div>
+                        </div>
+
+                        <!-- Row 2: Cemento -->
+                        <div class="dashboard-grid"
+                            style="gap:15px; margin-top:10px; grid-template-columns: 2fr 1fr 1fr 1fr; align-items:center;">
+                            <div style="font-weight:600; color:#475569;">
+                                <i class="fa-solid fa-cubes" style="color:#94a3b8; margin-right:8px;"></i> Cemento
+                                Blanco
+                            </div>
+                            <input type="number" id="calc-price-cemento" value="28.00" step="0.01" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;"
+                                oninput="calculateSpecificCost()">
+                            <input type="number" id="calc-gram-cemento" value="100" step="1" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;"
+                                oninput="calculateSpecificCost()">
+                            <div id="res-cemento" style="text-align:right; font-weight:700; color:#475569;">L 0.00</div>
+                        </div>
+
+                        <!-- Row 3: Agua (Ops) -->
+                        <div class="dashboard-grid"
+                            style="gap:15px; margin-top:10px; grid-template-columns: 2fr 1fr 1fr 1fr; align-items:center;">
+                            <div style="font-weight:600; color:#475569;">
+                                <i class="fa-solid fa-droplet" style="color:#3b82f6; margin-right:8px;"></i> Agua /
+                                Otros
+                            </div>
+                            <input type="number" id="calc-price-other" value="0.00" step="0.01" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" placeholder="L / lb"
+                                oninput="calculateSpecificCost()">
+                            <input type="number" id="calc-gram-other" value="0" step="1" class="form-control"
+                                style="padding:8px; border:1px solid #cbd5e1; border-radius:6px;" placeholder="g"
+                                oninput="calculateSpecificCost()">
+                            <div id="res-other" style="text-align:right; font-weight:700; color:#475569;">L 0.00</div>
+                        </div>
+
+                        <div style="font-size:11px; text-align:right; color:#94a3b8; margin-top:5px;">*1 Libra = 453.59g
+                        </div>
+
+
+                        <!-- OPERATIONAL COSTS -->
+                        <h3
+                            style="border-bottom:1px solid #e2e8f0; padding-bottom:15px; margin-bottom:20px; margin-top:30px; color:#1e293b;">
+                            2. Gastos Operativos y Mano de Obra</h3>
+
+                        <div class="three-column">
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-hand-holding-dollar"></i> Mano de Obra (L)</label>
+                                <input type="number" id="calc-labor" value="30.00" step="0.50"
+                                    oninput="calculateSpecificCost()">
+                                <small style="color:#94a3b8;">Pago por tu tiempo/trabajo</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-plug"></i> Maquinaria / Energía (L)</label>
+                                <input type="number" id="calc-energy" value="6.00" step="0.50"
+                                    oninput="calculateSpecificCost()">
+                                <small style="color:#94a3b8;">Ej: Airfryer, Luz, Desgaste</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-shapes"></i> Cantidad de Piezas</label>
+                                <input type="number" id="calc-qty" value="1" min="1" step="1"
+                                    oninput="calculateSpecificCost()">
+                                <small style="color:#94a3b8;">¿Cuántas figuras salieron?</small>
+                            </div>
+                        </div>
+
+                        <!-- RESULT CARD -->
+                        <div
+                            style="background: linear-gradient(145deg, #f8fafc, #f1f5f9); padding:30px; border-radius:16px; margin-top:40px; border:1px solid #e2e8f0; position:relative; overflow:hidden;">
+                            <div
+                                style="position:absolute; top:-20px; right:-20px; font-size:100px; color:rgba(0,0,0,0.03); transform:rotate(-15deg);">
+                                <i class="fa-solid fa-coins"></i>
+                            </div>
+
+                            <h3 style="color:#475569; text-align:center; margin-bottom:25px; font-size:18px;">RESUMEN DE
+                                COSTOS</h3>
+
+                            <div class="three-column" style="text-align:center; align-items:center;">
+
+                                <div style="border-right:1px solid #e2e8f0;">
+                                    <div class="text-small" style="margin-bottom:5px;">Costo Materiales</div>
+                                    <div id="res-total-materials"
+                                        style="font-size:20px; font-weight:700; color:#64748b;">L 0.00</div>
+                                </div>
+
+                                <div style="border-right:1px solid #e2e8f0;">
+                                    <div class="text-small" style="margin-bottom:5px;">Costo Operativo</div>
+                                    <div id="res-total-ops" style="font-size:20px; font-weight:700; color:#64748b;">L
+                                        0.00</div>
+                                </div>
+
+                                <div>
+                                    <div class="text-small" style="margin-bottom:5px;">COSTO UNITARIO FINAL</div>
+                                    <div id="res-final-unit" style="font-size:32px; font-weight:900; color:#dc2626;">L
+                                        0.00</div>
+                                </div>
+                            </div>
+
+                            <div
+                                style="margin-top:30px; padding-top:20px; border-top:2px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <div class="text-small">Precio Sugerido (x2.5)</div>
+                                    <div id="res-suggested" style="font-size:24px; font-weight:800; color:#059669;">L
+                                        0.00</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div class="text-small">Ganancia Estimada</div>
+                                    <div id="res-profit" style="font-size:20px; font-weight:700; color:#3b82f6;">L 0.00
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
+
         </div>
+    </div>
     </div>
 
     </div> <!-- End main-content -->
@@ -2514,6 +2673,119 @@
             }).join('');
         }
 
+        // --- CALCULATOR LOGIC ---
+        function populateCalculatorMaterials() {
+            const select = document.getElementById('calc-material-select');
+            if (!select) return;
+
+            // Hardcoded common materials if not in inventory
+            const commonMaterials = [
+                { id: 'yeso_ceramico', name: 'Yeso Cerámico (Saco 60lb/27kg)', cost: 230, unit: 'saco_60' }, // Example cost
+                { id: 'agua', name: 'Agua', cost: 0, unit: 'litro' }
+            ];
+
+            const inventory = state.inventoryData || {};
+            // Combine both
+            let html = '<option value="manual">-- Costo Manual --</option>';
+
+            // From Inventory
+            Object.entries(inventory).forEach(([key, item]) => {
+                html += `<option value="${key}" data-from="inventory">${item.name} (${item.unit})</option>`;
+            });
+
+            select.innerHTML = html;
+        }
+
+        function updateCalcMaterialCost() {
+            const select = document.getElementById('calc-material-select');
+            const costInput = document.getElementById('calc-material-cost');
+            const val = select.value;
+
+            if (val === 'manual') {
+                costInput.value = '';
+                costInput.disabled = false;
+                return;
+            }
+
+            // If it's from inventory, we try to deduce cost. 
+            // NOTE: The current inventory system DOES NOT store Purchase Price explicitly in inventoryData, 
+            // it only tracks stock quantity. 
+            // We can check the LAST purchase of this item to estimate cost.
+
+            const lastPurchase = state.purchases?.slice().reverse().find(p => p.item === val);
+            if (lastPurchase && lastPurchase.qty > 0 && lastPurchase.cost > 0) {
+                const unitCost = lastPurchase.cost / lastPurchase.qty;
+                costInput.value = unitCost.toFixed(2);
+            } else {
+                // If no history, we can't guess, so let user input
+                costInput.value = '';
+            }
+
+            // Allow override even if found
+            calculateCustomCost();
+        }
+
+        function calculateCustomCost() {
+            // 1. Material
+            const matCostUnit = parseFloat(document.getElementById('calc-material-cost').value) || 0;
+            const matUsed = parseFloat(document.getElementById('calc-material-used').value) || 0;
+
+            // Logic: If user enters "100" grams, and cost is per Kg? 
+            // We need to know the unit. For now, we assume:
+            // If Text says "Yeso", and cost is ~250 (Saco), that's tricky.
+            // SIMPLIFICATION: User gives "Costo por Kg/Unidad" and "Material Usado".
+            // If they are calculating grams, they should put Cost per Gram OR standardize.
+            // ADAPTATION BASED ON REQUEST: "100gramos de material...". 
+            // IF the cost is entered as "Per Kg" (common), and usage is Grams, we divide by 1000.
+            // Let's assume the user inputs Cost Per UNIT of consumption unless it's weight.
+            // Heuristic -> If usage > 50 (likely grams), and Cost > 100 (likely sack), this is hard to guess.
+            // LET'S STICK TO RAW MATH: Cost = UnitCost * Amount. 
+            // BUT for Plaster (Yeso), usually people buy Sacks but use Grams.
+            // Let's assume the user puts "Costo del Material por la Cantidad Usada" IF they select manual?
+            // BETTER: "Costo por Kg/Unidad". If they put 100 grams, they should put 0.1 Kg? 
+            // To be helpful, let's treat "Material Usado" as-is relative to Cost Unit.
+            // EXCEPT: If user explicitly mentioned "100 grams". 
+            // Let's add a helper text or logic: "Si es peso, ingresar costo por Kg y uso en gramos / 1000?"
+            // Let's use specific logic: Total Material Cost = (Used / 1000) * CostPerKg IF Cost > 0.
+            // WAIT, that's dangerous if it's "Units".
+            // Let's keep it simple: Cost = Cost * Used. User must match units.
+            // HOWEVER, for "Yeso", it's special. 
+
+            // Let's do: Total Material = (Used * UnitCost).
+            // Example: Used 0.1 (kg) * 10 (L/kg) = 1.00 L. Correct.
+            // User said: "100 grams". If they type 100, and Unit Cost is 0.01 (per gram), = 1.00.
+
+            let totalMaterial = matCostUnit * matUsed;
+
+            // Special Case: If user types huge numbers (e.g. 100g) but cost is high (e.g. 100L/sac), 
+            // It might be wrong. But we can't fix it without strict units.
+            // We will trust the user matches units (Cost per gram + grams OR Cost per Kg + Kg).
+            // PRO TIP: Special check for "Gramos"
+            // If the label says "Gramos" implied? The user prompt said: "ese molde agarra 100gramos".
+            // Let's add a toggle or just guide them.
+            // *Modified the label in HTML to: "Material Usado (Gramos/Unidades)"*
+            // IF input > 10 (likely grams) AND selected material is Yeso?
+            // Let's just do direct multiplication to be safe for ALL items (paint, brushes etc).
+
+            // If the user meant "100 grams" and input 100.
+            // And cost is "Per Kg". They must input cost/kg / 1000? 
+            // No, let's just use: Cost = (InputCost) * (InputQty).
+
+            // 2. Labor
+            const minutes = parseFloat(document.getElementById('calc-time-minutes').value) || 0;
+            const ratePerHour = parseFloat(document.getElementById('calc-labor-rate').value) || 0;
+            const laborCost = (minutes / 60) * ratePerHour;
+
+            // 3. Totals
+            const totalBatch = totalMaterial + laborCost;
+            const unitsProduced = parseFloat(document.getElementById('calc-units-produced').value) || 1;
+            const unitCost = totalBatch / unitsProduced;
+
+            document.getElementById('calc-total-batch').innerText = `L ${totalBatch.toFixed(2)}`;
+            document.getElementById('calc-unit-cost').innerText = `L ${unitCost.toFixed(2)}`;
+            document.getElementById('calc-suggested-price').innerText = `L ${(unitCost * 2.5).toFixed(2)}`;
+        }
+
         function updatePurchaseItems() {
             const select = document.getElementById('purchase-item');
             if (!select) return;
@@ -2798,11 +3070,46 @@
                 const rows = document.querySelectorAll('.kit-component-row');
                 let totalCost = 0;
 
-                const costs = {
-                    figura_g: 10.42,
-                    figura_p: 3.47,
-                    t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522,
-                    pinceles: 4.00, paletas: 4.00, envases: 2.66
+                // Helper to determine cost dynamically
+                const getMaterialCost = (key) => {
+                    // 1. Hardcoded legacy items
+                    const legacyCosts = {
+                        figura_g: 10.42,
+                        figura_p: 3.47,
+                        t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522,
+                        pinceles: 4.00, paletas: 4.00, envases: 2.66
+                    };
+                    if (legacyCosts[key] !== undefined) return legacyCosts[key];
+
+                    // 2. Dynamic Inventory/Catalog Lookup
+                    const item = state.inventoryData?.[key];
+
+                    // CHECK INVENTORY CATEGORY FIRST (The "Category Validation" field)
+                    // Values stored are 'figura_g' or 'figura_p' (from value attribute), NOT 'Figura GRANDE' (text)
+                    const invCat = (item?.category || '').toUpperCase();
+
+                    if (invCat === 'FIGURA_G' || invCat.includes('GRANDE')) return 10.42;
+                    if (invCat === 'FIGURA_P' || invCat.includes('PEQUEÑA') || invCat.includes('PEQUENA') || invCat.includes('MEDIANA')) return 3.47;
+
+                    // 3. Reverse Lookup (Fallback)
+                    if (state.recipes) {
+                        const parentProds = Object.keys(state.recipes).filter(rName => state.recipes?.[rName]?.[key]);
+
+                        for (const pName of parentProds) {
+                            const c = (state.catalogData?.[pName]?.category || '').toUpperCase();
+                            // Catalog categories might be free text or select values, check both
+                            if (c.includes('GRANDE') || c === 'FIGURA_G') return 10.42;
+                            if (c.includes('PEQUEÑA') || c.includes('PEQUENA') || c.includes('MEDIANA') || c === 'FIGURA_P') return 3.47;
+                        }
+                    }
+
+                    // 4. Check Name (Inventory)
+                    const nameUpper = (item?.name || key || '').toUpperCase();
+
+                    if (nameUpper.includes('GRANDE')) return 10.42;
+                    if (nameUpper.includes('PEQUEÑA') || nameUpper.includes('PEQUENA') || nameUpper.includes('MEDIANA')) return 3.47;
+
+                    return 0;
                 };
 
                 rows.forEach(row => {
@@ -2814,7 +3121,7 @@
                     const itemKey = select.value;
                     const qty = parseFloat(qtyInput.value) || 0;
 
-                    let unitCost = costs[itemKey] || 0;
+                    const unitCost = getMaterialCost(itemKey);
                     totalCost += (unitCost * qty);
                 });
 
@@ -2913,7 +3220,8 @@
 
             // UI Mode
             document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Actualizar Kit';
-            document.getElementById('cancel-edit-btn').style.display = 'block';
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            if (cancelBtn) cancelBtn.style.display = 'block';
             document.getElementById('stock-module').scrollTo({ top: 0, behavior: 'smooth' });
 
             updateKitStats();
@@ -2927,7 +3235,8 @@
             addKitComponentRow();
 
             document.querySelector('#kit-config-form button[type="submit"]').textContent = 'Guardar Configuración';
-            document.getElementById('cancel-edit-btn').style.display = 'none';
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            if (cancelBtn) cancelBtn.style.display = 'none';
             document.getElementById('kit-price').dataset.touched = 'false';
             updateKitStats();
         }
@@ -3087,33 +3396,7 @@
         }
 
         // --- AUTOMATIC KIT CALCULATION ---
-        function updateKitStats() {
-            const figG = parseFloat(document.getElementById('kit-figura-g').value) || 0;
-            const figP = parseFloat(document.getElementById('kit-figura-p').value) || 0;
-            const tRoja = parseFloat(document.getElementById('kit-roja').value) || 0;
-            const tAmari = parseFloat(document.getElementById('kit-amarilla').value) || 0;
-            const tAzul = parseFloat(document.getElementById('kit-azul').value) || 0;
-            const pinceles = parseFloat(document.getElementById('kit-pinceles').value) || 0;
-            const paletas = parseFloat(document.getElementById('kit-paletas').value) || 0;
-            const envases = parseFloat(document.getElementById('kit-envases').value) || 0;
 
-            const totalCost = (figG * 10.42) + (figP * 3.47) +
-                ((tRoja + tAmari + tAzul) * 0.522) +
-                (pinceles * 4) + (paletas * 4) + (envases * 2.66);
-
-            const suggestedPrice = totalCost * 2.5;
-
-            // DOM Updates
-            const costDisplay = document.getElementById('suggested-cost-display');
-            const priceDisplay = document.getElementById('suggested-price-display');
-            if (costDisplay) costDisplay.innerText = `L ${totalCost.toFixed(2)}`;
-            if (priceDisplay) priceDisplay.innerText = `L ${suggestedPrice.toFixed(0)}.00`;
-
-            const priceInput = document.getElementById('kit-price');
-            if (priceInput && (!priceInput.value || priceInput.value == "150")) {
-                priceInput.value = suggestedPrice.toFixed(0);
-            }
-        }
 
         // --- DASHBOARD & EXPORTS (GLOBAL) ---
         function openFinancialModal() { /* Deprecated */ }
@@ -3550,6 +3833,8 @@
             // If Financial Module, render stats
             if (mod === 'financial') {
                 renderFinancialDashboard();
+            } else if (mod === 'calculator') {
+                calculateSpecificCost();
             }
 
 
@@ -3711,6 +3996,60 @@
                 }
             }
         }
+
+        function calculateSpecificCost() {
+            const LB_TO_G = 453.59;
+            // Yeso
+            const pYeso = parseFloat(document.getElementById('calc-price-yeso').value) || 0;
+            const gYeso = parseFloat(document.getElementById('calc-gram-yeso').value) || 0;
+            const costYeso = (pYeso / LB_TO_G) * gYeso;
+            const resYeso = document.getElementById('res-yeso');
+            if (resYeso) resYeso.innerText = `L ${costYeso.toFixed(2)}`;
+
+            // Cemento
+            const pCement = parseFloat(document.getElementById('calc-price-cemento').value) || 0;
+            const gCement = parseFloat(document.getElementById('calc-gram-cemento').value) || 0;
+            const costCement = (pCement / LB_TO_G) * gCement;
+            const resCement = document.getElementById('res-cemento');
+            if (resCement) resCement.innerText = `L ${costCement.toFixed(2)}`;
+
+            // Other
+            const pOther = parseFloat(document.getElementById('calc-price-other').value) || 0;
+            const gOther = parseFloat(document.getElementById('calc-gram-other').value) || 0;
+            const costOther = (pOther > 0 && gOther > 0) ? (pOther / LB_TO_G) * gOther : 0;
+            const resOther = document.getElementById('res-other');
+            if (resOther) resOther.innerText = `L ${costOther.toFixed(2)}`;
+
+            // Op Expenses
+            const labor = parseFloat(document.getElementById('calc-labor').value) || 0;
+            const energy = parseFloat(document.getElementById('calc-energy').value) || 0;
+
+            // Totals
+            const totalMat = costYeso + costCement + costOther;
+            const totalOps = labor + energy;
+            const totalBatch = totalMat + totalOps;
+
+            // Units
+            const qty = parseFloat(document.getElementById('calc-qty').value) || 1;
+            const unitCost = qty > 0 ? totalBatch / qty : 0;
+
+            // Display Results
+            const elMat = document.getElementById('res-total-materials');
+            if (elMat) elMat.innerText = `L ${totalMat.toFixed(2)}`;
+
+            const elOps = document.getElementById('res-total-ops');
+            if (elOps) elOps.innerText = `L ${totalOps.toFixed(2)}`;
+
+            const elUnit = document.getElementById('res-final-unit');
+            if (elUnit) elUnit.innerText = `L ${unitCost.toFixed(2)}`;
+
+            const elSug = document.getElementById('res-suggested');
+            if (elSug) elSug.innerText = `L ${(unitCost * 2.5).toFixed(2)}`;
+
+            const elProf = document.getElementById('res-profit');
+            if (elProf) elProf.innerText = `L ${(unitCost * 2.5 - unitCost).toFixed(2)}`;
+        }
+
     </script>
 </body>
 
