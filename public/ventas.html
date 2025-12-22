@@ -7,7 +7,9 @@
     <title>Catálogo - Kits de Yeso</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&family=Dancing+Script:wght@700&display=swap"
+        rel="stylesheet">
     <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
     <script defer src="/__/firebase/init.js?useEmulator=false"></script>
@@ -27,54 +29,125 @@
             overflow-x: hidden;
         }
 
-        /* Header */
+        /* Header Redesign */
         .header {
             background: white;
-            border-bottom: 1px solid #e0e0e0;
             padding: 15px 0;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
         .header-container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .logo {
+        /* Brand / Logo */
+        .brand {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: 700;
-            color: #333;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 0.9;
         }
 
-        .logo i {
-            font-size: 24px;
-            color: #3b82f6;
+        .brand-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            color: #333;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: -5px;
         }
+
+        .brand-subtitle {
+            font-family: 'Dancing Script', cursive;
+            font-size: 32px;
+            color: #F4D03F;
+            /* Gold/Yellow */
+            margin-left: 20px;
+            transform: rotate(-3deg);
+            text-shadow: 0 2px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Navigation */
+        .nav-menu {
+            display: none;
+            /* Mobile first hidden */
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .nav-menu {
+                display: flex;
+            }
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #4a4a4a;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            transition: color 0.2s;
+            text-transform: uppercase;
+        }
+
+        .nav-link:hover {
+            color: #F4D03F;
+        }
+
+        .nav-link.active {
+            color: #333;
+            border-bottom: 2px solid #F4D03F;
+        }
+
+        /* Right Actions */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .social-icon {
+            color: #1a1a1a;
+            /* Dark gray */
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .social-icon:hover {
+            color: #F4D03F;
+        }
+
+        .social-icon.fb {
+            color: #3b5998;
+        }
+
+        .social-icon.ig {
+            color: #E1306C;
+        }
+
 
         .cart-icon {
             position: relative;
             cursor: pointer;
-            font-size: 24px;
+            font-size: 22px;
             color: #333;
-            padding: 10px;
-            /* Bigger touch target */
-            margin-right: -10px;
+            margin-left: 10px;
         }
 
         .cart-count {
             position: absolute;
-            top: 2px;
-            right: 0px;
+            top: -8px;
+            right: -8px;
             background: #ef4444;
             color: white;
             border-radius: 50%;
@@ -83,10 +156,25 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             border: 2px solid white;
         }
+
+        /* Mobile Menu Toggle */
+        .mobile-toggle {
+            display: block;
+            font-size: 24px;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+
+        @media (min-width: 992px) {
+            .mobile-toggle {
+                display: none;
+            }
+        }
+
 
         /* Main */
         .container {
@@ -872,19 +960,68 @@
             color: #94a3b8;
             margin-top: 15px;
             font-size: 14px;
-            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+
+            .nav-menu,
+            .social-icon {
+                display: none;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .header-container {
+                justify-content: space-between;
+            }
+
+            .brand {
+                margin-left: 0;
+            }
         }
     </style>
+
 </head>
 
 <body>
-    <div class="header">
+    <!-- Header -->
+    <header class="header">
         <div class="header-container">
-            <div class="logo"><i class="fa-solid fa-palette"></i><span>Kits de Yeso</span></div>
-            <div class="cart-icon" onclick="toggleCart()"><i class="fa-solid fa-shopping-cart"></i><span
-                    class="cart-count" id="cart-count">0</span></div>
+            <div style="display:flex; align-items:center;">
+                <i class="fa-solid fa-bars mobile-toggle" onclick="alert('Menú móvil pendiente de implementación')"></i>
+                <div class="brand">
+                    <div class="brand-title">YESOS <small style="font-size:0.6em; vertical-align: middle;">Y</small>
+                        FIGURAS</div>
+                    <div class="brand-subtitle">del Valle</div>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-link">INICIO</a>
+                <a href="#" class="nav-link active">CATÁLOGO</a>
+                <a href="#" class="nav-link">NOSOTROS</a>
+                <a href="#" class="nav-link">PRODUCTOS</a>
+                <a href="#" class="nav-link">CURSOS</a>
+                <a href="#" class="nav-link">CONTACTOS</a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="https://facebook.com" target="_blank" class="social-icon fb"><i
+                        class="fa-brands fa-facebook"></i></a>
+                <a href="https://instagram.com" target="_blank" class="social-icon ig"><i
+                        class="fa-brands fa-instagram"></i></a>
+
+                <div class="cart-icon" onclick="toggleCart()">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span class="cart-count" id="cart-count">0</span>
+                </div>
+            </div>
         </div>
-    </div>
+    </header>
     <div class="container">
         <h1 class="page-title">Nuestros Kits</h1>
 
