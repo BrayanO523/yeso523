@@ -983,6 +983,55 @@
                 margin-left: 0;
             }
         }
+
+        /* Dropdown Styles */
+        .nav-item-dropdown {
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+            /* Bridge for hover */
+            margin-bottom: -10px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 8px;
+            padding: 8px 0;
+            border: 1px solid #f1f5f9;
+        }
+
+        /* Show on hover */
+        .nav-item-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        /* Mobile compatibility: make sure it doesn't break layout */
+        .dropdown-item {
+            color: #475569;
+            padding: 12px 20px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: capitalize;
+            text-align: left;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8fafc;
+            color: #F4D03F;
+            padding-left: 25px;
+        }
     </style>
 
 </head>
@@ -1000,12 +1049,14 @@
             </div>
 
             <nav class="nav-menu">
-                <a href="#" class="nav-link">INICIO</a>
-                <a href="#" class="nav-link active">CATÁLOGO</a>
-                <a href="#" class="nav-link">NOSOTROS</a>
-                <a href="#" class="nav-link">PRODUCTOS</a>
-                <a href="#" class="nav-link">CURSOS</a>
-                <a href="#" class="nav-link">CONTACTOS</a>
+                <div class="nav-item-dropdown">
+                    <a href="#" class="nav-link active" onclick="renderProducts(); return false;">PRODUCTOS</a>
+                    <div class="dropdown-menu" id="category-dropdown">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+                <a href="#" class="nav-link">POR MAYOR</a>
+                <a href="#" class="nav-link">CONTACTANOS</a>
             </nav>
 
             <div class="header-actions">
@@ -1171,24 +1222,32 @@
 
         checkFirebase();
 
-        async function initApp() {
+        function initApp() {
+            // Real-time listener
             try {
-                db = firebase.firestore();
-                await loadData();
-                renderProducts();
-                document.getElementById('loading').style.display = 'none';
-            }
-
-            catch (e) {
-                console.error(e);
-                alert("Error al cargar el catálogo");
+                if (!db) db = firebase.firestore();
+                db.collection('config').doc('inventoryState').onSnapshot((doc) => {
+                    if (doc.exists) {
+                        state = doc.data();
+                        console.log("Datos recibidos:", state);
+                    } else {
+                        console.log("Documento no encontrado, iniciando estado vacío.");
+                        state = {}; // Prevent state from being undefined
+                    }
+                    renderProducts();
+                    document.getElementById('loading').style.display = 'none';
+                }, (error) => {
+                    console.error("Error cargando datos:", error);
+                    document.getElementById('loading').innerHTML = '<p style="color:red">Error de conexión: ' + error.message + '</p>';
+                });
+            } catch (e) {
+                console.error("Error initApp:", e);
+                document.getElementById('loading').innerHTML = '<p style="color:red">Error crítico de inicialización</p>';
             }
         }
 
-        async function loadData() {
-            const doc = await db.collection('config').doc('inventoryState').get();
-            if (doc.exists) state = doc.data();
-        }
+        // Removed separate async loadData because onSnapshot handles it
+
 
         function getMaxStock(recipe) {
             let max = Infinity;
@@ -1725,20 +1784,86 @@
         let currentSlideIndex = 0;
 
 
-        function renderProducts() {
+        // --- RENDER LOGIC WITH CATEGORIES ---
+        let currentCategoryFilter = null;
+
+        function renderCategoriesMenu() {
+            const catalog = state.catalogData || {};
+            // Default categories as per Admin Panel
+            const defaults = ['Kits', 'Figuras Grandes', 'Figuras Medianas', 'Figuras Pequeñas'];
+
+            // Extract unique categories from actual data
+            const used = new Set();
+            Object.values(catalog).forEach(item => {
+                let cat = item.category;
+                if (cat && cat !== 'otroc' && cat !== 'Otros') {
+                    used.add(cat.trim()); // Trim to avoid duplicates
+                }
+            });
+
+            // Merge defaults with used
+            const allCategories = new Set([...defaults, ...used]);
+
+            const dropdown = document.getElementById('category-dropdown');
+            if (!dropdown) return;
+
+            let html = '';
+            // Highlight "Ver Todo" if no filter is active
+            const activeStyle = !currentCategoryFilter ? 'color:#10b981;' : '';
+            html += `<div class="dropdown-item" style="${activeStyle}" onclick="renderProducts(null)"><strong>Ver Todo</strong></div>`;
+
+            // Filter out any default category from "others" to avoid duplicates (Case, trim sensitive)
+            const others = Array.from(used).filter(c => !defaults.includes(c)).sort();
+
+            // Helper to render items
+            const renderItem = (cat) => {
+                const isActive = currentCategoryFilter === cat ? 'color:#F4D03F; font-weight:700;' : '';
+                return `<div class="dropdown-item" style="${isActive}" onclick="renderProducts('${cat}')">${cat}</div>`;
+            };
+
+            defaults.forEach(cat => html += renderItem(cat));
+            others.forEach(cat => html += renderItem(cat));
+
+            dropdown.innerHTML = html;
+        }
+
+        function renderProducts(filterCategory) {
+            // Update filter only if explicitly passed (null counts as explicit "all")
+            if (typeof filterCategory !== 'undefined') {
+                currentCategoryFilter = filterCategory;
+            }
+
             const grid = document.getElementById('products-grid');
             const recipes = state.recipes || {};
             const catalog = state.catalogData || {};
 
-            const count = Object.keys(recipes).length;
-            document.getElementById('results-count').innerText = `${count} resultado${count !== 1 ? 's' : ''}`;
+            let entries = Object.entries(recipes);
+
+            // Filter using current state
+            if (currentCategoryFilter) {
+                entries = entries.filter(([name]) => {
+                    // Check logic: 
+                    // 1. Check direct category in catalogData
+                    // 2. OR check known categories if hardcoded? No, stick to DB.
+                    const itemCat = catalog[name]?.category;
+                    return itemCat === currentCategoryFilter;
+                });
+            }
+
+            const count = entries.length;
+            const countLabel = currentCategoryFilter ? `${count} resultado(s) en "${currentCategoryFilter}"` : `${count} resultado(s)`;
+
+            document.getElementById('results-count').innerHTML = countLabel;
+
+            // Re-render menu to update active highlights
+            renderCategoriesMenu();
 
             if (count === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles</p>';
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles en esta categoría</p>';
                 return;
             }
 
-            grid.innerHTML = Object.entries(recipes).map(([name, recipe]) => {
+            grid.innerHTML = entries.map(([name, recipe]) => {
                 const available = checkAvailability(recipe);
                 const info = catalog[name] || {};
 

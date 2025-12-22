@@ -2096,9 +2096,14 @@
                                 </div>
                             </div>
                         </div>
-                        <button onclick="saveCatalogKit('${kitName}')" class="primary-btn" style="margin-top: 15px;">
-                            <i class="fa-solid fa-save"></i> Guardar Cambios
-                        </button>
+                        <div style="display:flex; justify-content:space-between; margin-top:15px;">
+                            <button onclick="saveCatalogKit('${kitName}')" class="primary-btn">
+                                <i class="fa-solid fa-save"></i> Guardar Cambios
+                            </button>
+                            <button onclick="deleteCatalogKit('${kitName}')" class="primary-btn" style="background-color: #ef4444;">
+                                <i class="fa-solid fa-trash"></i> Eliminar Todo
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -2212,22 +2217,56 @@
         }
 
         async function saveCatalogKit(kitName) {
-            const safeName = kitName.replace(/\s+/g, '_');
-            const description = document.getElementById(`catalog-desc-${safeName}`).value.trim();
-            const itemsText = document.getElementById(`catalog-items-${safeName}`).value.trim();
-            const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
+            updateSyncUI('syncing');
+            // Description
+            const desc = document.getElementById(`catalog-desc-${kitName.replace(/\s+/g, '_')}`).value;
+            // Custom Items List
+            const includeText = document.getElementById(`catalog-items-${kitName.replace(/\s+/g, '_')}`).value;
+            const items = includeText.split('\n').map(i => i.trim()).filter(i => i);
 
-            // Images are already saved via uploadImage, but we ensure description is updated
-            state.catalogData[kitName] = state.catalogData[kitName] || {};
-            state.catalogData[kitName].description = description;
-            state.catalogData[kitName].customItems = customItems;
+            // Update State
+            if (!state.catalogData[kitName]) state.catalogData[kitName] = {};
+            state.catalogData[kitName].description = desc;
+            state.catalogData[kitName].customItems = items;
+
+            // Save
+            await saveState();
+            alert("Información del catálogo guardada correctamente.");
+            updateSyncUI('cloud');
+        }
+
+        async function deleteCatalogKit(kitName) {
+            if (!confirm(`⚠️ ¿ESTÁS SEGURO?\n\nEsta acción eliminará permanentemente:\n- El kit "${kitName}"\n- Todas sus configuraciones\n- Todas las imágenes asociadas en la nube.\n\nNo se puede deshacer.`)) return;
+
+            updateSyncUI('syncing');
 
             try {
-                await saveState();
-                alert(`✅ Cambios guardados para "${kitName}"`);
+                // 1. Delete Images from Storage
+                const images = state.catalogData[kitName]?.images || [];
+
+                for (const url of images) {
+                    try {
+                        const fileRef = firebase.storage().refFromURL(url);
+                        await fileRef.delete();
+                        console.log(`Imagen eliminada: ${url}`);
+                    } catch (err) {
+                        console.warn(`No se pudo eliminar imagen (tal vez ya no existe): ${url}`, err);
+                    }
+                }
+
+                // 2. Remove from Database State
+                if (state.recipes[kitName]) delete state.recipes[kitName];
+                if (state.catalogData[kitName]) delete state.catalogData[kitName];
+
+                // 3. Save Changes
+                saveState();
+                alert("Kit eliminado y espacio liberado exitosamente.");
+                renderCatalogModule(); // Refresh UI
+
             } catch (e) {
-                console.error(e);
-                alert('Error al guardar cambios');
+                console.error("Error eliminando kit:", e);
+                alert("Hubo un error al eliminar. Revisa la consola.");
+                updateSyncUI('local'); // Fallback status
             }
         }
 
