@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
+    <link rel="icon" type="image/png" href="public/favicon.png">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -436,12 +437,14 @@
 
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <i class="fa-solid fa-gem"></i><span>YESOS Admin</span>
+            <img src="https://firebasestorage.googleapis.com/v0/b/yesos-836cd.firebasestorage.app/o/1766382607409.png?alt=media&token=c5c2f551-a068-469f-8afe-823d01d24bb6"
+                alt="Logo" style="height: 40px; border-radius: 5px;">
+            <span>YESOS Admin</span>
         </div>
         <nav>
             <button class="nav-item active" onclick="switchMode('presentation')"><i class="fa-solid fa-desktop"></i>
                 <span>Presentación</span></button>
-            <a href="ventas.html" class="nav-item" style="text-decoration:none;"><i
+            <a href="public/ventas.html" class="nav-item" style="text-decoration:none;"><i
                     class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span></a>
             <div class="nav-separator">GESTIÓN</div>
             <button class="nav-item" onclick="showModule('stock')" id="btn-stock"><i
@@ -472,7 +475,8 @@
             <div class="slide-container active"
                 style="justify-content:center; align-items:center; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color:white;">
                 <div style="text-align: center;">
-                    <i class="fa-solid fa-paintbrush" style="font-size: 60px; color: #60a5fa; margin-bottom: 20px;"></i>
+                    <img src="public/logo.png" alt="Logo Gigante"
+                        style="max-height: 200px; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                     <h1 style="color:white; margin-bottom:20px;">Kits de Yeso</h1>
                     <p style="color:#94a3b8; font-size:24px;">Panel de Administración y Ventas</p>
                 </div>
