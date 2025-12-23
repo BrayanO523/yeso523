@@ -677,12 +677,20 @@
             } catch (e) { console.error("Error cargando datos", e); }
         }
 
-        function checkAvailability(recipe) {
+        function getMaxStock(recipe) {
+            let max = Infinity;
             for (const [item, required] of Object.entries(recipe)) {
                 if (item === 'price') continue;
-                if ((state.stock[item] || 0) < required) return false;
+                if (required <= 0) continue; // Ignorar requisitos invalidos
+                const available = state.stock[item] || 0;
+                const possible = Math.floor(available / required);
+                if (possible < max) max = possible;
             }
-            return true;
+            return max === Infinity ? 0 : max;
+        }
+
+        function checkAvailability(recipe) {
+            return getMaxStock(recipe) > 0;
         }
 
         // --- LÓGICA DE CATÁLOGO ACTUALIZADA ---
@@ -730,7 +738,7 @@
             const recipe = state.recipes[kitName];
             if (!recipe) return;
 
-            const available = checkAvailability(recipe);
+            const maxStock = getMaxStock(recipe);
             const catalog = (state.catalogData || {})[kitName] || {};
 
             // Determinar qué lista mostrar (Personalizada vs Automática)
@@ -760,10 +768,24 @@
                 document.getElementById('modal-description').innerHTML = `<p style="margin-bottom:10px;">${catalog.description}</p>` + document.getElementById('modal-description').innerHTML;
             }
 
-            document.getElementById('modal-stock-info').innerText = available ? '(Disponible)' : '(Sin stock)';
-            document.getElementById('modal-add-cart').disabled = !available;
-            document.getElementById('modal-buy-now').disabled = !available;
-            modalQty = 1;
+            // Validacion de stock vs carrito
+            const cartItem = cart.find(item => item.name === kitName);
+            const inCart = cartItem ? cartItem.quantity : 0;
+            const availableToAdd = Math.max(0, maxStock - inCart);
+
+            document.getElementById('modal-stock-info').innerText = `(Disponibles: ${maxStock})`;
+
+            // Si ya tienes todo el stock en el carrito
+            if (availableToAdd === 0 && maxStock > 0) {
+                document.getElementById('modal-stock-info').innerText += ' - Máximo alcanzado en carrito';
+            } else if (maxStock === 0) {
+                document.getElementById('modal-stock-info').innerText = '(Agotado)';
+            }
+
+            document.getElementById('modal-add-cart').disabled = availableToAdd === 0;
+            document.getElementById('modal-buy-now').disabled = availableToAdd === 0;
+
+            modalQty = availableToAdd > 0 ? 1 : 0;
             document.getElementById('modal-qty').innerText = modalQty;
             document.getElementById('product-modal').classList.add('active');
             document.getElementById('overlay').classList.add('active');
@@ -781,15 +803,38 @@
         }
 
         function updateModalQty(delta) {
-            modalQty = Math.max(1, modalQty + delta);
+            const recipe = state.recipes[currentProduct];
+            if (!recipe) return;
+
+            const maxStock = getMaxStock(recipe);
+            const cartItem = cart.find(item => item.name === currentProduct);
+            const inCart = cartItem ? cartItem.quantity : 0;
+            const availableToAdd = Math.max(0, maxStock - inCart);
+
+            let newQty = modalQty + delta;
+            if (newQty < 1) newQty = 1;
+            if (newQty > availableToAdd) newQty = availableToAdd;
+
+            // Edge case: si availableToAdd es 0, newQty debe ser 0, pero ya esta deshabilitado el boton de agregar
+            if (availableToAdd === 0) newQty = 0;
+
+            modalQty = newQty;
             document.getElementById('modal-qty').innerText = modalQty;
         }
 
         function addToCartFromModal() {
             const recipe = state.recipes[currentProduct];
-            if (!recipe || !checkAvailability(recipe)) return;
+            if (!recipe) return;
 
+            const maxStock = getMaxStock(recipe);
             const existing = cart.find(item => item.name === currentProduct);
+            const inCart = existing ? existing.quantity : 0;
+
+            if ((inCart + modalQty) > maxStock) {
+                alert(`Solo hay ${maxStock} unidades disponibles. Ya tienes ${inCart} en el carrito.`);
+                return;
+            }
+
             if (existing) existing.quantity += modalQty;
             else cart.push({ name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe });
 
@@ -843,7 +888,17 @@
         }
 
         function updateQuantity(index, delta) {
-            cart[index].quantity += delta;
+            const item = cart[index];
+            const maxStock = getMaxStock(item.recipe);
+
+            const newQty = item.quantity + delta;
+
+            if (newQty > maxStock) {
+                alert(`Solo hay ${maxStock} unidades disponibles de ${item.name}.`);
+                return;
+            }
+
+            cart[index].quantity = newQty;
             if (cart[index].quantity <= 0) cart.splice(index, 1);
             updateCart();
         }

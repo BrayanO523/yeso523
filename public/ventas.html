@@ -1505,27 +1505,29 @@
 
             const maxStock = getMaxStock(recipe);
 
+            // Validacion de stock vs carrito
+            const cartItem = cart.find(item => item.name === kitName);
+            const inCart = cartItem ? cartItem.quantity : 0;
+            const availableToAdd = Math.max(0, maxStock - inCart);
+
             // Limit text
             const stockInfo = document.getElementById('modal-stock-info');
+            stockInfo.innerText = `(Disponibles: ${maxStock})`;
+            stockInfo.style.color = maxStock > 0 ? '#10b981' : '#ef4444';
 
-            if (maxStock > 0) {
-                stockInfo.innerText = `(Disponibles: $ {
-                        maxStock
-                    })`;
-                stockInfo.style.color = '#10b981';
+            if (availableToAdd === 0 && maxStock > 0) {
+                stockInfo.innerText += ' - Máximo en carrito';
+                stockInfo.style.color = '#f59e0b';
+            } else if (maxStock === 0) {
+                stockInfo.innerText = '(Agotado)';
             }
 
-            else {
-                stockInfo.innerText = '(Sin stock)';
-                stockInfo.style.color = '#ef4444';
-            }
+            document.getElementById('modal-add-cart').disabled = availableToAdd === 0;
+            document.getElementById('modal-buy-now').disabled = availableToAdd === 0;
 
-            document.getElementById('modal-add-cart').disabled = maxStock === 0;
-            document.getElementById('modal-buy-now').disabled = maxStock === 0;
-
-            modalQty = 1;
+            modalQty = availableToAdd > 0 ? 1 : 0;
             document.getElementById('modal-qty').innerText = modalQty;
-            document.getElementById('modal-qty').dataset.max = maxStock; // Store max for validation
+            document.getElementById('modal-qty').dataset.max = availableToAdd; // Store effective limit
 
             document.getElementById('product-modal').classList.add('active');
             document.getElementById('overlay').classList.add('active');
@@ -1554,10 +1556,12 @@
         }
 
         function updateModalQty(delta) {
-            const max = parseInt(document.getElementById('modal-qty').dataset.max || 1);
+            const max = parseInt(document.getElementById('modal-qty').dataset.max || 0);
             let newQty = modalQty + delta;
+
             if (newQty < 1) newQty = 1;
             if (newQty > max) newQty = max;
+            if (max === 0) newQty = 0;
 
             modalQty = newQty;
             document.getElementById('modal-qty').innerText = modalQty;
@@ -1565,26 +1569,24 @@
 
         function addToCartFromModal() {
             const recipe = state.recipes[currentProduct];
-            if (!recipe || !checkAvailability(recipe)) return;
+            if (!recipe) return;
 
+            const maxStock = getMaxStock(recipe);
             const existing = cart.find(item => item.name === currentProduct);
-            if (existing) existing.quantity += modalQty;
+            const inCart = existing ? existing.quantity : 0;
 
+            if ((inCart + modalQty) > maxStock) {
+                alert(`Solo hay ${maxStock} unidades disponibles. Ya tienes ${inCart} en el carrito.`);
+                return;
+            }
+
+            if (existing) existing.quantity += modalQty;
             else cart.push({
                 name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe
             });
 
             updateCart();
-
-            showToast(`$ {
-                modalQty
-            }
-
-            $ {
-                currentProduct
-            }
-
-            agregado al carrito`);
+            showToast(`${modalQty} ${currentProduct} agregado al carrito`);
             closeModal();
         }
 
@@ -1646,7 +1648,16 @@
         }
 
         function updateQuantity(index, delta) {
-            cart[index].quantity += delta;
+            const item = cart[index];
+            const maxStock = getMaxStock(item.recipe);
+            const newQty = item.quantity + delta;
+
+            if (newQty > maxStock) {
+                alert(`Solo hay ${maxStock} unidades disponibles de ${item.name}.`);
+                return;
+            }
+
+            cart[index].quantity = newQty;
             if (cart[index].quantity <= 0) cart.splice(index, 1);
             updateCart();
         }
