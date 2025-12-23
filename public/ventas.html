@@ -179,7 +179,7 @@
             width: 100%;
             aspect-ratio: 1 / 1;
             position: relative;
-            background: #f8fafc;
+            background: #ffffff;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -2002,8 +2002,7 @@
                 return `
                     <div class="product-card" onclick="openProductModal('${name}')">
                         ${imgHtml}
-                            <div class="availability-badge ${!available ? 'out-of-stock' : ''}">${available ? 'Disponible' : 'Agotado'}</div>
-                        </div>
+                        <div class="availability-badge ${!available ? 'out-of-stock' : ''}">${available ? 'Disponible' : 'Agotado'}</div>
                         <div class="product-info">
                             <div class="product-name">${name}</div>
                             <div class="product-description">${displayDesc}</div>
