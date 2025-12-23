@@ -144,8 +144,61 @@
             color: #3b5998;
         }
 
-        .social-icon.ig {
-            color: #E1306C;
+        /* Skeleton Loading */
+        .skeleton {
+            background: #e2e8f0;
+            background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+            background-size: 200% 100%;
+            animation: 1.5s shine linear infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position-x: -200%;
+            }
+        }
+
+        /* Input Validation */
+        .input-error {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+
+        /* Smart Sticky Header */
+        .header {
+            transition: transform 0.3s ease;
+        }
+
+        .header.header-hidden {
+            transform: translateY(-100%);
+        }
+
+        /* Image Object Fit Container */
+        .product-image-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            background: #f8fafc;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-image-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* Fix for cutting images */
+            transition: opacity 0.5s ease;
+            opacity: 0;
+            padding: 10px;
+            /* Internal padding so contain doesn't touch edges if full */
+        }
+
+        .product-image-img.loaded {
+            opacity: 1;
         }
 
 
@@ -1275,7 +1328,35 @@
             return max === Infinity ? 0 : max;
         }
 
+        // Calculates the maximum quantity of a specific item that can be made,
+        // considering the materials already "reserved" by other items in the cart.
+        function getEffectiveMaxStock(recipe, currentItemName = null) {
+            const reserved = {};
+
+            // Calculate consumption by OTHER items
+            cart.forEach(item => {
+                if (item.name === currentItemName) return; // Ignore self
+                for (const [key, qty] of Object.entries(item.recipe)) {
+                    if (key === 'price') continue;
+                    reserved[key] = (reserved[key] || 0) + (qty * item.quantity);
+                }
+            });
+
+            let max = Infinity;
+            for (const [item, required] of Object.entries(recipe)) {
+                if (item === 'price') continue;
+                const totalInInventory = state.stock[item] || 0;
+                const usedByOthers = reserved[item] || 0;
+                const availableForThis = Math.max(0, totalInInventory - usedByOthers);
+
+                const possible = Math.floor(availableForThis / required);
+                if (possible < max) max = possible;
+            }
+            return max === Infinity ? 0 : max;
+        }
+
         function checkAvailability(recipe) {
+            // Check absolute availability (ignoring cart) for grid display
             return getMaxStock(recipe) > 0;
         }
 
@@ -1429,8 +1510,8 @@
         }
 
         function openProductModal(kitName) {
-            currentProduct = kitName;
-            const recipe = state.recipes[kitName];
+            currentProduct = kitName.trim();
+            const recipe = state.recipes[currentProduct];
             if (!recipe) return;
 
             const catalog = state.catalogData || {}
@@ -1506,7 +1587,7 @@
             const maxStock = getMaxStock(recipe);
 
             // Validacion de stock vs carrito
-            const cartItem = cart.find(item => item.name === kitName);
+            const cartItem = cart.find(item => item.name === currentProduct);
             const inCart = cartItem ? cartItem.quantity : 0;
             const availableToAdd = Math.max(0, maxStock - inCart);
 
@@ -1571,12 +1652,12 @@
             const recipe = state.recipes[currentProduct];
             if (!recipe) return;
 
-            const maxStock = getMaxStock(recipe);
-            const existing = cart.find(item => item.name === currentProduct);
-            const inCart = existing ? existing.quantity : 0;
+            // Verificación Robusta con Effective Stock
+            const maxStock = getEffectiveMaxStock(recipe, currentProduct);
 
             if ((inCart + modalQty) > maxStock) {
-                alert(`Solo hay ${maxStock} unidades disponibles. Ya tienes ${inCart} en el carrito.`);
+                console.warn(`Stock check failed: Max ${maxStock}, Cart ${inCart}, Adding ${modalQty}`);
+                alert(`No puedes agregar más unidades. El stock máximo disponible (considerando tu carrito actual) es ${maxStock}.`);
                 return;
             }
 
@@ -1649,11 +1730,11 @@
 
         function updateQuantity(index, delta) {
             const item = cart[index];
-            const maxStock = getMaxStock(item.recipe);
+            const maxStock = getEffectiveMaxStock(item.recipe, item.name);
             const newQty = item.quantity + delta;
 
             if (newQty > maxStock) {
-                alert(`Solo hay ${maxStock} unidades disponibles de ${item.name}.`);
+                alert(`Solo puedes llevar un máximo de ${maxStock} unidades de ${item.name} basado en el stock disponible y los otros artículos de tu carrito.`);
                 return;
             }
 
@@ -1898,9 +1979,24 @@
                 const autoDesc = Object.entries(recipe).filter(([k]) => k !== 'price').map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`).join(' • ');
                 const displayDesc = info.description || autoDesc;
 
-                let imgHtml = '<div class="product-image"><i class="fa-solid fa-box-open"></i>';
+                let imgHtml = '';
+
                 if (mainImage && mainImage.startsWith('http')) {
-                    imgHtml = `<div class="product-image" style="background-image: url('${mainImage}'); background-size: cover; background-position: center;">`;
+                    // New Skeleton + Object Fit Implementation
+                    imgHtml = `
+                        <div class="product-image-container skeleton">
+                            <img 
+                                src="${mainImage}" 
+                                class="product-image-img" 
+                                loading="lazy"
+                                onload="this.classList.add('loaded'); this.parentElement.classList.remove('skeleton');" 
+                                onerror="this.parentElement.classList.remove('skeleton'); this.parentElement.innerHTML='<i class=\'fa-solid fa-image\' style=\'font-size:40px; color:#cbd5e1\'></i>'"
+                            >
+                        </div>
+                    `;
+                } else {
+                    // Fallback
+                    imgHtml = `<div class="product-image-container"><i class="fa-solid fa-box-open" style="font-size: 60px; color: #cbd5e1;"></i></div>`;
                 }
 
                 return `
@@ -1995,7 +2091,7 @@
                 `<p style="margin-bottom:15px;">${info.description}</p><strong>Incluye:</strong><br>${itemsHtml}` :
                 `<strong>Incluye:</strong><br>${itemsHtml}`;
 
-            const maxStock = getMaxStock(recipe);
+            const maxStock = getEffectiveMaxStock(recipe, currentProduct);
             const stockInfo = document.getElementById('modal-stock-info');
 
             if (maxStock > 0) {
@@ -2099,6 +2195,7 @@
             let newQty = modalQty + delta;
             if (newQty < 1) newQty = 1;
             if (newQty > max) newQty = max;
+            if (max === 0) newQty = 0; // Fix: Allow 0 if max is 0 (though button disabled usually)
 
             modalQty = newQty;
             document.getElementById('modal-qty').innerText = modalQty;
@@ -2106,9 +2203,17 @@
 
         function addToCartFromModal() {
             const recipe = state.recipes[currentProduct];
-            if (!recipe || !checkAvailability(recipe)) return;
+            if (!recipe) return; // checkAvailability check removed here to allow effective stock check to handle logic
 
+            const maxStock = getEffectiveMaxStock(recipe, currentProduct);
             const existing = cart.find(item => item.name === currentProduct);
+            const inCart = existing ? existing.quantity : 0;
+
+            if ((inCart + modalQty) > maxStock) {
+                alert(`No puedes agregar más unidades. El stock máximo disponible (considerando tu carrito actual) es ${maxStock}.`);
+                return;
+            }
+
             if (existing) existing.quantity += modalQty;
             else cart.push({ name: currentProduct, price: parseFloat(recipe.price), quantity: modalQty, recipe });
 
@@ -2165,7 +2270,16 @@
         }
 
         function updateQuantity(index, delta) {
-            cart[index].quantity += delta;
+            const item = cart[index];
+            const maxStock = getEffectiveMaxStock(item.recipe, item.name);
+            const newQty = item.quantity + delta;
+
+            if (newQty > maxStock) {
+                alert(`Solo puedes llevar un máximo de ${maxStock} unidades de ${item.name} considerando el stock y otros artículos.`);
+                return;
+            }
+
+            cart[index].quantity = newQty;
             if (cart[index].quantity <= 0) cart.splice(index, 1);
             updateCart();
         }
@@ -2285,6 +2399,56 @@
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
+    </script>
+    <script>
+        // --- UX ENHANCEMENTS ---
+
+        // 1. Smart Sticky Header
+        let lastScrollTop = 0;
+        window.addEventListener("scroll", function () {
+            let st = window.pageYOffset || document.documentElement.scrollTop;
+            const header = document.querySelector('.header');
+            if (!header) return;
+
+            if (st > lastScrollTop && st > 100) {
+                // Scroll Down
+                header.classList.add('header-hidden');
+            } else {
+                // Scroll Up
+                header.classList.remove('header-hidden');
+            }
+            lastScrollTop = st <= 0 ? 0 : st;
+        }, false);
+
+        // 2. Real-time Form Validation
+        document.addEventListener('DOMContentLoaded', () => {
+            const nameInput = document.getElementById('cust-name');
+            const phoneInput = document.getElementById('cust-phone');
+            const phoneContainer = document.getElementById('phone-container');
+
+            if (nameInput) {
+                nameInput.addEventListener('blur', () => {
+                    if (!nameInput.value.trim()) nameInput.classList.add('input-error');
+                    else nameInput.classList.remove('input-error');
+                });
+                nameInput.addEventListener('input', () => nameInput.classList.remove('input-error'));
+            }
+
+            if (phoneInput) {
+                const validatePhone = () => {
+                    const val = phoneInput.value.replace(/[^0-9]/g, '');
+                    if (val.length !== 8) phoneContainer.classList.add('input-error');
+                    else phoneContainer.classList.remove('input-error');
+                };
+
+                phoneInput.addEventListener('blur', validatePhone);
+                phoneInput.addEventListener('input', () => {
+                    // Solo quitar error si empieza a corregirlo, o validar realtime? Mejor quitar al escribir
+                    phoneContainer.classList.remove('input-error');
+                });
+            }
+        });
+
     </script>
 </body>
 
