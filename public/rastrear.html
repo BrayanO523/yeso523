@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastrear Pedido - Kits de Yeso</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-app-check-compat.js"></script>
+    <script defer src="/__/firebase/init.js?useEmulator=false"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .result-card {
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            background: #f8fafc;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status.completed {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .items-list {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #64748b;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <a href="ventas.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Volver a la tienda</a>
+        <h1>Rastrear Pedido</h1>
+
+        <div class="form-group">
+            <label>Número de Teléfono</label>
+            <input type="tel" id="phone" placeholder="Ej: 99887766" maxlength="8">
+        </div>
+        <button onclick="trackOrder()" id="btn-track">Buscar Pedidos</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Init App Check immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait briefly for firebase to load
+            setTimeout(() => {
+                try {
+                    const appCheck = firebase.appCheck();
+                    appCheck.activate(
+                        '6LeXQjUsAAAAAPzZnLGZgUL96DIAcznY57kazgoW',
+                        true
+                    );
+                } catch (e) { console.log("App Check init error (ignore in emulator)", e); }
+            }, 1000);
+        });
+
+        async function trackOrder() {
+            const phone = document.getElementById('phone').value.trim();
+            if (phone.length < 8) return alert("Ingresa un número válido de 8 dígitos");
+
+            const btn = document.getElementById('btn-track');
+            const results = document.getElementById('results');
+
+            btn.disabled = true;
+            btn.innerText = "Buscando...";
+            results.innerHTML = '';
+
+            try {
+                const getOrders = firebase.functions().httpsCallable('getOrdersByPhone');
+                const response = await getOrders({ phone });
+
+                const orders = response.data.orders;
+
+                if (orders.length === 0) {
+                    results.innerHTML = '<p style="text-align:center; margin-top:20px; color:#64748b">No se encontraron pedidos con este número.</p>';
+                } else {
+                    results.innerHTML = orders.map(o => `
+                        <div class="result-card">
+                            <div class="order-header">
+                                <span>#${o.id.slice(-6)}</span>
+                                <span>${o.date}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="status ${o.status}">${o.status === 'pending' ? 'Pendiente' : o.status}</span>
+                                <strong>L ${o.total.toFixed(2)}</strong>
+                            </div>
+                            <div class="items-list">
+                                ${o.items.map(i => `<div>${i.quantity}x ${i.name}</div>`).join('')}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert("Error al buscar pedidos. Intenta nuevamente.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Buscar Pedidos";
+            }
+        }
+    </script>
+</body>
+
+</html>

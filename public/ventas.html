@@ -12,6 +12,8 @@
         rel="stylesheet">
     <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-functions-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-app-check-compat.js"></script>
     <script defer src="/__/firebase/init.js?useEmulator=false"></script>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -256,10 +258,59 @@
             color: #1a1a1a;
         }
 
+        /* Search Bar Sticky */
+        .search-container {
+            position: sticky;
+            top: 73px;
+            /* Height of header approx */
+            background: #f8f9fa;
+            z-index: 90;
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 991px) {
+            .search-container {
+                top: 60px;
+            }
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 1px solid #e2e8f0;
+            border-radius: 50px;
+            font-size: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .search-icon-input {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        /* Results Count adjustment */
         .results-count {
             color: #666;
             margin-bottom: 20px;
             font-size: 14px;
+            text-align: center;
         }
 
         /* Products Grid */
@@ -1138,6 +1189,14 @@
             </div>
         </div>
     </header>
+    <div class="search-container">
+        <div class="search-input-wrapper">
+            <i class="fa-solid fa-search search-icon-input"></i>
+            <input type="text" id="search-input" class="search-input" placeholder="Buscar kits o figuras..."
+                oninput="filterBySearch(this.value)">
+        </div>
+    </div>
+
     <div class="container">
         <h1 class="page-title">Nuestros Kits</h1>
 
@@ -1782,6 +1841,12 @@
         async function submitOrderWithDetails(e) {
             e.preventDefault();
 
+            // 1. Verificación de Conexión
+            if (!navigator.onLine) {
+                alert("No hay conexión a internet. Por favor verifica tu red e intenta nuevamente.");
+                return;
+            }
+
             const customerName = document.getElementById('cust-name').value.trim();
             const phoneInput = document.getElementById('cust-phone').value.trim();
 
@@ -1793,78 +1858,60 @@
             // Close inputs modal
             document.getElementById('customer-details-modal').classList.remove('active');
 
-            const unitCosts = {
-                figura_g: 10.42, figura_p: 3.47, t_roja: 0.522, t_amarilla: 0.522, t_azul: 0.522, pinceles: 4.00, paletas: 4.00, envases: 2.66
-            }
-
-                ;
-            const orderId = Date.now().toString();
-            const orderItems = [];
-            let orderTotal = 0;
-            let orderProfit = 0;
-
-            for (const item of cart) {
-                // Calculate Cost & Profit for TOTAL quantity
-                let unitCost = 0;
-
-                for (const [mat, qty] of Object.entries(item.recipe)) {
-                    if (mat === 'price') continue;
-                    unitCost += (unitCosts[mat] || 0) * qty;
-
-                    // Deduct Stock
-                    state.stock[mat] = Math.max(0, (state.stock[mat] || 0) - (qty * item.quantity));
-                }
-
-                const totalItemCost = unitCost * item.quantity;
-                const totalItemPrice = item.price * item.quantity;
-                const totalItemProfit = totalItemPrice - totalItemCost;
-
-                orderItems.push({
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price, // Unit price
-                    recipe: item.recipe,
-                    profit: parseFloat(totalItemProfit.toFixed(2))
-                });
-
-                orderTotal += totalItemPrice;
-                orderProfit += totalItemProfit;
-            }
-
-            // Save to Pending Orders
-            state.pendingOrders = state.pendingOrders || [];
-
-            state.pendingOrders.push({
-                id: orderId,
-                date: new Date().toLocaleDateString(),
-                timestamp: Date.now(),
-                customer: customerName,
-                phone: customerPhone,
-                total: parseFloat(orderTotal.toFixed(2)),
-                profit: parseFloat(orderProfit.toFixed(2)),
-                items: orderItems,
-                status: 'pending'
-            });
+            // Mostrar Loading
+            document.getElementById('loading').style.display = 'flex';
 
             try {
-                await db.collection('config').doc('inventoryState').set(state);
+                // 2. Inicializar App Check
+                const appCheck = firebase.appCheck();
+                appCheck.activate(
+                    '6LeXQjUsAAAAAPzZnLGZgUL96DIAcznY57kazgoW',
+                    true
+                );
 
-                // Success flow
-                cart = [];
-                updateCart();
-                renderProducts();
+                // 3. Llamar a Cloud Function
+                const submitOrder = firebase.functions().httpsCallable('submitOrder');
 
-                // Show success confirmation modal
-                document.getElementById('checkout-modal').classList.add('active');
-                // Overlay is already active from previous modal, keep it or re-add if needed
-                document.getElementById('overlay').classList.add('active');
+                const response = await submitOrder({
+                    cart: cart,
+                    customer: {
+                        elementName: customerName,
+                        elementPhone: customerPhone
+                    }
+                });
 
-            }
+                if (response.data.success) {
+                    // Success flow
+                    cart = [];
+                    updateCart();
+                    // Forzar recarga de datos para ver el stock actualizado
+                    await loadData();
+                    renderProducts();
 
-            catch (e) {
+                    document.getElementById('loading').style.display = 'none';
+
+                    // Show success confirmation modal
+                    document.getElementById('checkout-modal').classList.add('active');
+                    document.getElementById('overlay').classList.add('active');
+                } else {
+                    throw new Error(response.data.message || 'Error desconocido');
+                }
+
+            } catch (e) {
                 console.error(e);
-                alert('Error al procesar el pedido. Intenta nuevamente.');
+                document.getElementById('loading').style.display = 'none';
+
+                let msg = 'Error al procesar el pedido. Intenta nuevamente.';
+                if (e.code === 'resource-exhausted') {
+                    msg = 'Algunos productos ya no tienen stock suficiente. Por favor revisa tu carrito.';
+                } else if (e.message) {
+                    msg = e.message;
+                }
+
+                alert(msg);
                 document.getElementById('overlay').classList.remove('active');
+                // Recargar datos para sincronizar con el servidor en caso de error de stock
+                loadData().then(renderProducts);
             }
         }
 
@@ -1932,6 +1979,14 @@
             dropdown.innerHTML = html;
         }
 
+        // --- SEARCH LOGIC ---
+        let currentSearchTerm = '';
+
+        function filterBySearch(term) {
+            currentSearchTerm = term.toLowerCase().trim();
+            renderProducts();
+        }
+
         function renderProducts(filterCategory) {
             // Update filter only if explicitly passed (null counts as explicit "all")
             if (typeof filterCategory !== 'undefined') {
@@ -1944,19 +1999,26 @@
 
             let entries = Object.entries(recipes);
 
-            // Filter using current state
+            // Filter using current state (CATEGORY)
             if (currentCategoryFilter) {
                 entries = entries.filter(([name]) => {
-                    // Check logic: 
-                    // 1. Check direct category in catalogData
-                    // 2. OR check known categories if hardcoded? No, stick to DB.
                     const itemCat = catalog[name]?.category;
                     return itemCat === currentCategoryFilter;
                 });
             }
 
+            // Filter using current state (SEARCH)
+            if (currentSearchTerm) {
+                entries = entries.filter(([name]) => {
+                    return name.toLowerCase().includes(currentSearchTerm);
+                });
+            }
+
             const count = entries.length;
-            const countLabel = currentCategoryFilter ? `${count} resultado(s) en "${currentCategoryFilter}"` : `${count} resultado(s)`;
+
+            let countLabel = `${count} resultado(s)`;
+            if (currentCategoryFilter) countLabel += ` en "${currentCategoryFilter}"`;
+            if (currentSearchTerm) countLabel += ` buscando "${currentSearchTerm}"`;
 
             document.getElementById('results-count').innerHTML = countLabel;
 
@@ -1964,7 +2026,7 @@
             renderCategoriesMenu();
 
             if (count === 0) {
-                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles en esta categoría</p>';
+                grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 60px;">No hay productos disponibles con estos filtros</p>';
                 return;
             }
 

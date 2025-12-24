@@ -17,6 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script defer src="/__/firebase/10.7.1/firebase-app-compat.js"></script>
+    <script defer src="/__/firebase/10.7.1/firebase-auth-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-firestore-compat.js"></script>
     <script defer src="/__/firebase/10.7.1/firebase-storage-compat.js"></script>
     <script>
@@ -435,318 +436,437 @@
 <body>
     <div id="debug-console">Iniciando...</div>
 
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <div class="tile" style="width:100%; max-width:400px; text-align:center;">
             <img src="https://firebasestorage.googleapis.com/v0/b/yesos-836cd.firebasestorage.app/o/1766382607409.png?alt=media&token=c5c2f551-a068-469f-8afe-823d01d24bb6"
-                alt="Logo" style="height: 40px; border-radius: 5px;">
-            <span>YESOS Admin</span>
-        </div>
-        <nav>
-            <button class="nav-item active" onclick="switchMode('presentation')"><i class="fa-solid fa-desktop"></i>
-                <span>Presentación</span></button>
-            <a href="public/ventas.html" class="nav-item" style="text-decoration:none;"><i
-                    class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span></a>
-            <div class="nav-separator">GESTIÓN</div>
-            <button class="nav-item" onclick="showModule('stock')" id="btn-stock"><i
-                    class="fa-solid fa-boxes-stacked"></i> <span>Inventario</span></button>
-            <button class="nav-item" onclick="showModule('kits')" id="btn-kits"><i
-                    class="fa-solid fa-wand-magic-sparkles"></i> <span>Mis Kits</span></button>
-            <button class="nav-item" onclick="showModule('catalog')" id="btn-catalog"><i class="fa-solid fa-store"></i>
-                <span>Catálogo Web</span></button>
-            <button class="nav-item" onclick="showModule('purchases')" id="btn-purchases"><i
-                    class="fa-solid fa-cart-shopping"></i> <span>Compras</span></button>
-            <button class="nav-item" onclick="showModule('orders')" id="btn-orders"><i
-                    class="fa-solid fa-clipboard-check"></i> <span>Pedidos</span></button>
-            <button class="nav-item" onclick="showModule('sales')" id="btn-sales"><i
-                    class="fa-solid fa-file-invoice-dollar"></i> <span>Ventas/Facturas</span></button>
-
-            <div
-                style="margin-top:auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #94a3b8;">
-                <div id="sync-status" style="display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-circle" style="color: #64748b;"></i><span>Estado: Conectando...</span>
+                alt="Logo" style="height:60px; margin-bottom:20px;">
+            <h2 style="margin-bottom:20px; color:#1e293b;">Acceso Administrativo</h2>
+            <form id="login-form">
+                <div class="form-group" style="text-align:left;">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="login-email" required placeholder="admin@yesos.com">
                 </div>
-            </div>
-        </nav>
-        <div class="sidebar-toggle" id="sidebarToggle"><i class="fa-solid fa-chevron-left"></i></div>
-    </div>
-
-    <div class="main-content" id="mainContent">
-        <div id="presentation-mode" class="mode-view active">
-            <div class="slide-container active"
-                style="justify-content:center; align-items:center; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color:white;">
-                <div style="text-align: center;">
-                    <img src="public/logo.png" alt="Logo Gigante"
-                        style="max-height: 200px; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                    <h1 style="color:white; margin-bottom:20px;">Kits de Yeso</h1>
-                    <p style="color:#94a3b8; font-size:24px;">Panel de Administración y Ventas</p>
+                <div class="form-group" style="text-align:left;">
+                    <label>Contraseña</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
                 </div>
-            </div>
-        </div>
-
-        <div id="admin-mode" class="mode-view">
-            <div class="admin-container">
-
-                <div id="stock-module" class="admin-module active">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                        <h2 class="slide-title" style="margin:0;">Inventario</h2>
-                        <button class="primary-btn" onclick="toggleNewProductForm()"
-                            style="width:auto; padding:10px 20px;"><i class="fa-solid fa-plus"></i> Nuevo</button>
-                    </div>
-
-                    <div id="new-product-modal" class="tile"
-                        style="display: none; margin-bottom: 30px; border: 2px solid var(--highlight);">
-                        <h3>Gestionar Producto</h3>
-                        <form id="new-product-form">
-                            <input type="hidden" id="edit-prod-id">
-                            <div class="dashboard-grid"
-                                style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top:15px;">
-                                <div class="form-group"><label>Nombre</label><input type="text" id="new-prod-name"
-                                        required></div>
-                                <div class="form-group"><label>Unidad</label><select id="new-prod-unit">
-                                        <option value="kg">kg</option>
-                                        <option value="ml">ml</option>
-                                        <option value="uds">uds</option>
-                                    </select></div>
-                                <div class="form-group"><label>Stock</label><input type="number" id="new-prod-qty"
-                                        step="0.01" value="0"></div>
-                                <div class="form-group"><label>Categoría</label><select id="new-prod-category">
-                                        <option value="general">Materia Prima</option>
-                                        <option value="figura_g">Figura G</option>
-                                        <option value="figura_p">Figura P</option>
-                                    </select></div>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-top:20px;">
-                                <button type="submit" class="primary-btn">Guardar</button>
-                                <button type="button" class="primary-btn" style="background:#ef4444;"
-                                    onclick="toggleNewProductForm()">Cancelar</button>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="inventory-grid" id="inventory-container"></div>
-                </div>
-
-                <div id="kits-module" class="admin-module">
-                    <h2 class="slide-title">Mis Kits</h2>
-                    <div class="dashboard-grid">
-                        <div class="tile">
-                            <h3>Crear / Editar Kit</h3>
-                            <form id="kit-config-form">
-                                <div class="form-group"><label>Nombre del Kit</label><input type="text" id="kit-name"
-                                        required></div>
-                                <div class="form-group"><label>Precio Venta (L)</label><input type="number"
-                                        id="kit-price" required></div>
-                                <h4 style="margin:15px 0 10px 0; color:#64748b;">Ingredientes (Qué se descuenta del
-                                    inventario):</h4>
-                                <div id="kit-ingredients-container"
-                                    style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; max-height:300px; overflow-y:auto; padding-right:5px;">
-                                </div>
-                                <button type="submit" class="primary-btn" style="margin-top:20px;">Guardar Kit</button>
-                            </form>
-                        </div>
-                        <div class="tile highlight">
-                            <h3>Kits Existentes</h3>
-                            <div id="kit-catalog-list" style="text-align:left;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="catalog-module" class="admin-module">
-                    <h2 class="slide-title">Catálogo Web - Personalización</h2>
-                    <p style="margin-bottom:20px; color:#64748b;">Aquí puedes agregar fotos y descripciones bonitas para
-                        la página de ventas (ventas.html).</p>
-                    <div id="catalog-kits-list"></div>
-                </div>
-
-                <div id="sales-module" class="admin-module">
-                    <h2 class="slide-title">Ventas</h2>
-                    <div class="dashboard-grid">
-                        <div class="tile highlight">
-                            <h3>Registrar Venta</h3>
-                            <form id="sales-form">
-                                <div class="form-group"><label>Seleccionar Kit</label><select id="sale-type"
-                                        required></select></div>
-                                <div class="form-group"><label>Precio</label><input type="number" id="sale-price"
-                                        required></div>
-                                <button type="submit" class="primary-btn success">Vender</button>
-                            </form>
-                        </div>
-                        <div class="tile">
-                            <h3>Total Ganancia</h3>
-                            <div class="big-number" id="total-profit">L 0.00</div>
-                        </div>
-                    </div>
-                    <div class="tile" style="margin-top:30px;">
-                        <h3>Historial</h3>
-                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-bottom:10px;">
-                            <button onclick="clearSalesHistory()"
-                                style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Borrar
-                                Historial</button>
-                        </div>
-                        <table class="financial-table" id="sales-history">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Kit</th>
-                                    <th>Precio</th>
-                                    <th>Ganancia</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="purchases-module" class="admin-module">
-                    <h2 class="slide-title">Compras</h2>
-                    <div class="tile">
-                        <form id="purchase-form">
-                            <div class="dashboard-grid" style="margin-top:0;">
-                                <div class="form-group"><label>Material</label><select id="purchase-item"></select>
-                                </div>
-                                <div class="form-group"><label>Cantidad</label><input type="number" id="purchase-qty"
-                                        required></div>
-                                <div class="form-group"><label>Costo Total</label><input type="number"
-                                        id="purchase-cost" required></div>
-                            </div>
-                            <button type="submit" class="primary-btn">Registrar Compra</button>
-                        </form>
-                    </div>
-                </div>
-
-                <div id="orders-module" class="admin-module">
-                    <h2 class="slide-title">Pedidos Pendientes</h2>
-                    <p style="color:#64748b; margin-bottom:20px;">Estos pedidos han reservado stock pero aún no se ha
-                        confirmado el pago. Confirma para registrar la venta o rechaza para devolver el stock.</p>
-                    <div id="pending-orders-list" class="dashboard-grid"></div>
-                </div>
-
-            </div>
+                <div id="login-error" style="color:#ef4444; margin-bottom:15px; font-size:14px; display:none;"></div>
+                <button type="submit" class="primary-btn" id="login-btn">
+                    <i class="fa-solid fa-lock"></i> Iniciar Sesión
+                </button>
+            </form>
         </div>
     </div>
 
-    <script>
-        // === DEBUGGER ===
-        function logDebug(msg) {
-            console.log(msg);
-            const el = document.getElementById('debug-console');
-            if (el) el.innerText = msg;
-        }
+    <!-- PROTECTED CONTENT WRAPPER -->
+    <div id="app-content" style="display:none;">
 
-        let db = null;
-        let state = {
-            stock: {},
-            inventoryData: {},
-            recipes: {},
-            purchases: [],
-            sales: [],
-            catalogData: {},
-            totalProfit: 0
-        };
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="https://firebasestorage.googleapis.com/v0/b/yesos-836cd.firebasestorage.app/o/1766382607409.png?alt=media&token=c5c2f551-a068-469f-8afe-823d01d24bb6"
+                    alt="Logo" style="height: 40px; border-radius: 5px;">
+                <span>YESOS Admin</span>
+            </div>
+            <nav>
+                <button class="nav-item active" onclick="switchMode('presentation')"><i class="fa-solid fa-desktop"></i>
+                    <span>Presentación</span></button>
+                <a href="/ventas.html" class="nav-item" style="text-decoration:none;"><i
+                        class="fa-solid fa-cart-shopping"></i> <span>Ir a Caja (Ventas)</span></a>
+                <div class="nav-separator">GESTIÓN</div>
+                <button class="nav-item" onclick="showModule('stock')" id="btn-stock"><i
+                        class="fa-solid fa-boxes-stacked"></i> <span>Inventario</span></button>
+                <button class="nav-item" onclick="showModule('kits')" id="btn-kits"><i
+                        class="fa-solid fa-wand-magic-sparkles"></i> <span>Mis Kits</span></button>
+                <button class="nav-item" onclick="showModule('catalog')" id="btn-catalog"><i
+                        class="fa-solid fa-store"></i>
+                    <span>Catálogo Web</span></button>
+                <button class="nav-item" onclick="showModule('purchases')" id="btn-purchases"><i
+                        class="fa-solid fa-cart-shopping"></i> <span>Compras</span></button>
+                <button class="nav-item" onclick="showModule('orders')" id="btn-orders"><i
+                        class="fa-solid fa-clipboard-check"></i> <span>Pedidos</span></button>
+                <button class="nav-item" onclick="showModule('sales')" id="btn-sales"><i
+                        class="fa-solid fa-file-invoice-dollar"></i> <span>Ventas/Facturas</span></button>
 
-        // Función para verificar si Firebase ha cargado
-        function checkFirebase() {
-            logDebug("Verificando Firebase...");
-            if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
-                logDebug("SDKs cargados. Iniciando App...");
-                initApp();
-            } else {
-                logDebug("Esperando SDKs...");
-                setTimeout(checkFirebase, 500); // Reintentar cada 0.5s
+                <div
+                    style="margin-top:auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #94a3b8;">
+                    <div id="sync-status" style="display: flex; align-items: center; gap: 8px; margin-bottom:10px;">
+                        <i class="fa-solid fa-circle" style="color: #64748b;"></i><span>Estado: Conectando...</span>
+                    </div>
+                    <button onclick="logout()"
+                        style="width:100%; padding:8px; background:rgba(239, 68, 68, 0.2); color:#ef4444; border:1px solid #ef4444; border-radius:6px; cursor:pointer; font-size:12px;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </nav>
+            <div class="sidebar-toggle" id="sidebarToggle"><i class="fa-solid fa-chevron-left"></i></div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div id="presentation-mode" class="mode-view active">
+                <div class="slide-container active"
+                    style="justify-content:center; align-items:center; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color:white;">
+                    <div style="text-align: center;">
+                        <img src="public/logo.png" alt="Logo Gigante"
+                            style="max-height: 200px; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <h1 style="color:white; margin-bottom:20px;">Kits de Yeso</h1>
+                        <p style="color:#94a3b8; font-size:24px;">Panel de Administración y Ventas</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-mode" class="mode-view">
+                <div class="admin-container">
+
+                    <div id="stock-module" class="admin-module active">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                            <h2 class="slide-title" style="margin:0;">Inventario</h2>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" placeholder="Buscar..."
+                                    style="padding:10px; border-radius:8px; border:1px solid #cbd5e1;"
+                                    oninput="filterAdminList('inventory', this.value)">
+                                <button class="primary-btn" onclick="toggleHistoryModal()"
+                                    style="width:auto; padding:10px; background:#eab308; color:white;"
+                                    title="Ver Historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                                <button class="primary-btn" onclick="toggleNewProductForm()"
+                                    style="width:auto; padding:10px 20px;"><i class="fa-solid fa-plus"></i>
+                                    Nuevo</button>
+                            </div>
+                        </div>
+
+                        <!-- HISTORY MODAL -->
+                        <div id="history-modal" class="tile"
+                            style="display:none; margin-bottom: 20px; border:1px solid #eab308;">
+                            <h3 style="color:#eab308; margin-bottom:15px;">Historial de Cambios</h3>
+                            <div id="history-log-list" style="max-height: 200px; overflow-y:auto;"></div>
+                            <button onclick="toggleHistoryModal()"
+                                style="margin-top:10px; width:100%; padding:8px; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer;">Cerrar</button>
+                        </div>
+
+                        <div id="new-product-modal" class="tile"
+                            style="display: none; margin-bottom: 30px; border: 2px solid var(--highlight);">
+                            <h3>Gestionar Producto</h3>
+                            <form id="new-product-form">
+                                <input type="hidden" id="edit-prod-id">
+                                <div class="dashboard-grid"
+                                    style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top:15px;">
+                                    <div class="form-group"><label>Nombre</label><input type="text" id="new-prod-name"
+                                            required></div>
+                                    <div class="form-group"><label>Unidad</label><select id="new-prod-unit">
+                                            <option value="kg">kg</option>
+                                            <option value="ml">ml</option>
+                                            <option value="uds">uds</option>
+                                        </select></div>
+                                    <div class="form-group"><label>Stock</label><input type="number" id="new-prod-qty"
+                                            step="0.01" value="0"></div>
+                                    <div class="form-group"><label>Categoría</label><select id="new-prod-category">
+                                            <option value="general">Materia Prima</option>
+                                            <option value="figura_g">Figura G</option>
+                                            <option value="figura_p">Figura P</option>
+                                        </select></div>
+                                </div>
+                                <div style="display:flex; gap:10px; margin-top:20px;">
+                                    <button type="submit" class="primary-btn">Guardar</button>
+                                    <button type="button" class="primary-btn" style="background:#ef4444;"
+                                        onclick="toggleNewProductForm()">Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="inventory-grid" id="inventory-container"></div>
+                    </div>
+
+                    <div id="kits-module" class="admin-module">
+                        <h2 class="slide-title">Mis Kits</h2>
+                        <div class="dashboard-grid">
+                            <div class="tile">
+                                <h3>Crear / Editar Kit</h3>
+                                <form id="kit-config-form">
+                                    <div class="form-group"><label>Nombre del Kit</label><input type="text"
+                                            id="kit-name" required></div>
+                                    <div class="form-group"><label>Precio Venta (L)</label><input type="number"
+                                            id="kit-price" required></div>
+                                    <h4 style="margin:15px 0 10px 0; color:#64748b;">Ingredientes (Qué se descuenta del
+                                        inventario):</h4>
+                                    <div id="kit-ingredients-container"
+                                        style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; max-height:300px; overflow-y:auto; padding-right:5px;">
+                                    </div>
+                                    <button type="submit" class="primary-btn" style="margin-top:20px;">Guardar
+                                        Kit</button>
+                                </form>
+                            </div>
+                            <div class="tile highlight">
+                                <div
+                                    style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                    <h3>Kits Existentes</h3>
+                                    <input type="text" placeholder="Buscar..."
+                                        style="padding:5px; border-radius:4px; border:1px solid #cbd5e1;"
+                                        oninput="filterAdminList('kits', this.value)">
+                                </div>
+                                <div id="kit-catalog-list" style="text-align:left;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="catalog-module" class="admin-module">
+                        <h2 class="slide-title">Catálogo Web - Personalización</h2>
+                        <p style="margin-bottom:20px; color:#64748b;">Aquí puedes agregar fotos y descripciones bonitas
+                            para
+                            la página de ventas (ventas.html).</p>
+                        <input type="text" placeholder="Buscar en catálogo..."
+                            style="padding:10px; width:100%; margin-bottom:20px; border-radius:8px; border:1px solid #cbd5e1;"
+                            oninput="filterAdminList('catalog', this.value)">
+                        <div id="catalog-kits-list"></div>
+                    </div>
+
+                    <div id="sales-module" class="admin-module">
+                        <h2 class="slide-title">Ventas</h2>
+                        <div class="dashboard-grid">
+                            <div class="tile highlight">
+                                <h3>Registrar Venta</h3>
+                                <form id="sales-form">
+                                    <div class="form-group"><label>Seleccionar Kit</label><select id="sale-type"
+                                            required></select></div>
+                                    <div class="form-group"><label>Precio</label><input type="number" id="sale-price"
+                                            required></div>
+                                    <button type="submit" class="primary-btn success">Vender</button>
+                                </form>
+                            </div>
+                            <div class="tile">
+                                <h3>Total Ganancia</h3>
+                                <div class="big-number" id="total-profit">L 0.00</div>
+                            </div>
+                        </div>
+                        <div class="tile" style="margin-top:30px;">
+                            <h3>Historial</h3>
+                            <div style="display:flex; gap:10px; justify-content:flex-end; margin-bottom:10px;">
+                                <button onclick="clearSalesHistory()"
+                                    style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Borrar
+                                    Historial</button>
+                            </div>
+                            <table class="financial-table" id="sales-history">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Kit</th>
+                                        <th>Precio</th>
+                                        <th>Ganancia</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="purchases-module" class="admin-module">
+                        <h2 class="slide-title">Compras</h2>
+                        <div class="tile">
+                            <form id="purchase-form">
+                                <div class="dashboard-grid" style="margin-top:0;">
+                                    <div class="form-group"><label>Material</label><select id="purchase-item"></select>
+                                    </div>
+                                    <div class="form-group"><label>Cantidad</label><input type="number"
+                                            id="purchase-qty" required></div>
+                                    <div class="form-group"><label>Costo Total</label><input type="number"
+                                            id="purchase-cost" required></div>
+                                </div>
+                                <button type="submit" class="primary-btn">Registrar Compra</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="orders-module" class="admin-module">
+                        <h2 class="slide-title">Pedidos Pendientes</h2>
+                        <p style="color:#64748b; margin-bottom:20px;">Estos pedidos han reservado stock pero aún no se
+                            ha
+                            confirmado el pago. Confirma para registrar la venta o rechaza para devolver el stock.</p>
+                        <div id="pending-orders-list" class="dashboard-grid"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div> <!-- End of app-content -->
+
+        <script>
+            // === DEBUGGER ===
+            function logDebug(msg) {
+                console.log(msg);
+                const el = document.getElementById('debug-console');
+                if (el) el.innerText = msg;
             }
-        }
 
-        // Iniciar el chequeo
-        window.onload = checkFirebase;
+            // === AUTH SECURITY ===
+            function initAuth() {
+                const overlay = document.getElementById('login-overlay');
+                const app = document.getElementById('app-content');
 
-        async function initApp() {
-            try {
-                db = firebase.firestore();
-                logDebug("Conectando a Firestore...");
+                // Listen to auth state
+                firebase.auth().onAuthStateChanged(user => {
+                    if (user) {
+                        overlay.style.display = 'none';
+                        app.style.display = 'block';
+                        logDebug("Usuario: " + user.email);
+                    } else {
+                        app.style.display = 'none';
+                        overlay.style.display = 'flex';
+                        logDebug("Esperando login...");
+                    }
+                });
 
-                await loadState(); // Intentar cargar datos
+                // Login Handler
+                const form = document.getElementById('login-form');
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById('login-email').value;
+                        const pass = document.getElementById('login-password').value;
+                        const err = document.getElementById('login-error');
+                        const btn = document.getElementById('login-btn');
 
-                logDebug("¡Conectado y cargado!");
-                updateSyncUI('cloud');
-                updateUI();
-            } catch (e) {
-                console.error("Error crítico:", e);
-                logDebug("Error: " + e.message);
-                updateSyncUI('local');
-                // Fallback a LocalStorage si falla la red
-                const saved = localStorage.getItem('yesos_backup');
-                if (saved) {
-                    state = JSON.parse(saved);
-                    updateUI();
-                    alert("No se pudo conectar a la base de datos. Se cargó la copia local.");
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+                        err.style.display = 'none';
+
+                        firebase.auth().signInWithEmailAndPassword(email, pass)
+                            .then(() => {
+                                // Success is handled by onAuthStateChanged
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fa-solid fa-lock"></i> Iniciar Sesión';
+                            })
+                            .catch(error => {
+                                console.error(error);
+                                err.innerText = "Error: Credenciales incorrectas.";
+                                err.style.display = 'block';
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fa-solid fa-lock"></i> Iniciar Sesión';
+                            });
+                    });
                 }
             }
-        }
 
-        function updateSyncUI(status) {
-            const el = document.getElementById('sync-status');
-            if (!el) return;
-            const icon = el.querySelector('i');
-            const span = el.querySelector('span');
-
-            if (status === 'cloud') {
-                icon.style.color = '#10b981'; // Verde
-                span.innerText = 'Estado: Conectado (Nube)';
-            } else {
-                icon.style.color = '#ef4444'; // Rojo
-                span.innerText = 'Estado: Local (Error/Sin Conexión)';
+            function logout() {
+                if (confirm("¿Cerrar sesión?")) {
+                    firebase.auth().signOut();
+                }
             }
-        }
 
-        async function loadState() {
-            // Intentar leer de Firestore
-            const doc = await db.collection('config').doc('inventoryState').get();
-            if (doc.exists) {
-                const data = doc.data();
-                state = { ...state, ...data };
-                state.catalogData = state.catalogData || {};
-                logDebug("Datos descargados correctamente");
-            } else {
-                logDebug("Conectado, pero no hay datos guardados aún.");
+            let db = null;
+            let state = {
+                stock: {},
+                inventoryData: {},
+                recipes: {},
+                purchases: [],
+                sales: [],
+                catalogData: {},
+                totalProfit: 0
+            };
+
+            // Función para verificar si Firebase ha cargado
+            function checkFirebase() {
+                logDebug("Verificando Firebase...");
+                if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function' && typeof firebase.auth === 'function') {
+                    logDebug("SDKs cargados. Iniciando App...");
+                    initAuth();
+                    initApp();
+                } else {
+                    logDebug("Esperando SDKs...");
+                    setTimeout(checkFirebase, 500); // Reintentar cada 0.5s
+                }
             }
-        }
 
-        async function saveState() {
-            try {
-                if (db) {
-                    await db.collection('config').doc('inventoryState').set(state);
+            // Iniciar el chequeo
+            window.onload = checkFirebase;
+
+            async function initApp() {
+                try {
+                    db = firebase.firestore();
+                    logDebug("Conectando a Firestore...");
+
+                    await loadState(); // Intentar cargar datos
+
+                    logDebug("¡Conectado y cargado!");
                     updateSyncUI('cloud');
-                    logDebug("Guardado en nube exitoso");
+                    updateUI();
+                } catch (e) {
+                    console.error("Error crítico:", e);
+                    logDebug("Error: " + e.message);
+                    updateSyncUI('local');
+                    // Fallback a LocalStorage si falla la red
+                    const saved = localStorage.getItem('yesos_backup');
+                    if (saved) {
+                        state = JSON.parse(saved);
+                        updateUI();
+                        alert("No se pudo conectar a la base de datos. Se cargó la copia local.");
+                    }
                 }
-                localStorage.setItem('yesos_backup', JSON.stringify(state)); // Backup local
-                updateUI();
-            } catch (e) {
-                console.error(e);
-                logDebug("Error al guardar: " + e.message);
-                alert("Error guardando en la nube. Verifica tu conexión.");
-                updateSyncUI('local');
             }
-        }
 
-        // UI Updates
-        function updateUI() {
-            renderInventory();
-            renderKits();
-            renderCatalogModule();
-            renderSalesHistory();
-            renderPendingOrders();
-            renderFormOptions();
+            function updateSyncUI(status) {
+                const el = document.getElementById('sync-status');
+                if (!el) return;
+                const icon = el.querySelector('i');
+                const span = el.querySelector('span');
 
-            document.getElementById('total-profit').innerText = `L ${state.totalProfit.toFixed(2)}`;
-        }
+                if (status === 'cloud') {
+                    icon.style.color = '#10b981'; // Verde
+                    span.innerText = 'Estado: Conectado (Nube)';
+                } else {
+                    icon.style.color = '#ef4444'; // Rojo
+                    span.innerText = 'Estado: Local (Error/Sin Conexión)';
+                }
+            }
 
-        function renderInventory() {
-            const container = document.getElementById('inventory-container');
-            if (!container) return;
-            container.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
-                const data = state.inventoryData[id] || { name: id, unit: 'uds' };
-                const imgStyle = data.image ? `background-image:url('${data.image}')` : '';
-                return `
+            async function loadState() {
+                // Intentar leer de Firestore
+                const doc = await db.collection('config').doc('inventoryState').get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    state = { ...state, ...data };
+                    state.catalogData = state.catalogData || {};
+                    state.stockHistory = state.stockHistory || []; // Init history
+                    logDebug("Datos descargados correctamente");
+                } else {
+                    logDebug("Conectado, pero no hay datos guardados aún.");
+                }
+            }
+
+            async function saveState() {
+                try {
+                    if (db) {
+                        await db.collection('config').doc('inventoryState').set(state);
+                        updateSyncUI('cloud');
+                        logDebug("Guardado en nube exitoso");
+                    }
+                    localStorage.setItem('yesos_backup', JSON.stringify(state)); // Backup local
+                    updateUI();
+                } catch (e) {
+                    console.error(e);
+                    logDebug("Error al guardar: " + e.message);
+                    alert("Error guardando en la nube. Verifica tu conexión.");
+                    updateSyncUI('local');
+                }
+            }
+
+            // UI Updates
+            function updateUI() {
+                renderInventory();
+                renderKits();
+                renderCatalogModule();
+                renderSalesHistory();
+                renderPendingOrders();
+                renderFormOptions();
+
+                document.getElementById('total-profit').innerText = `L ${state.totalProfit.toFixed(2)}`;
+            }
+
+            function renderInventory() {
+                const container = document.getElementById('inventory-container');
+                if (!container) return;
+                container.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
+                    const data = state.inventoryData[id] || { name: id, unit: 'uds' };
+                    const imgStyle = data.image ? `background-image:url('${data.image}')` : '';
+                    return `
                     <div class="inventory-card">
                         <div class="card-img" style="${imgStyle}">
                             ${!data.image ? '<i class="fa-solid fa-box"></i>' : ''}
@@ -760,58 +880,58 @@
                         <button onclick="editProduct('${id}')" style="position:absolute; top:10px; right:10px; border:none; background:none; cursor:pointer; color:#3b82f6;"><i class="fa-solid fa-pen"></i></button>
                     </div>
                 `;
-            }).join('');
-        }
+                }).join('');
+            }
 
-        function renderKits() {
-            const list = document.getElementById('kit-catalog-list');
-            const ingContainer = document.getElementById('kit-ingredients-container');
+            function renderKits() {
+                const list = document.getElementById('kit-catalog-list');
+                const ingContainer = document.getElementById('kit-ingredients-container');
 
-            if (list) {
-                list.innerHTML = Object.entries(state.recipes).map(([name, r]) => `
+                if (list) {
+                    list.innerHTML = Object.entries(state.recipes).map(([name, r]) => `
                     <div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;">
                         <span><b>${name}</b> (L ${r.price})</span>
                         <button onclick="deleteKit('${name}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `).join('');
-            }
+                }
 
-            if (ingContainer && ingContainer.innerHTML === '') {
-                ingContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
-                    const name = state.inventoryData[id]?.name || id;
-                    return `
+                if (ingContainer && ingContainer.innerHTML === '') {
+                    ingContainer.innerHTML = Object.entries(state.stock).map(([id, qty]) => {
+                        const name = state.inventoryData[id]?.name || id;
+                        return `
                         <div class="form-group" style="margin-bottom:5px;">
                             <label style="font-size:12px;">${name}</label>
                             <input type="number" class="kit-ing-input" data-id="${id}" value="0" step="0.01" style="padding:8px;">
                         </div>
                     `;
-                }).join('');
-            }
-        }
-
-        // --- MÓDULO CATÁLOGO WEB ---
-        function renderCatalogModule() {
-            const container = document.getElementById('catalog-kits-list');
-            if (!container) return;
-
-            const recipes = state.recipes || {};
-            if (Object.keys(recipes).length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #999; padding: 60px;">No hay kits creados. Ve a "Mis Kits" para crear uno.</p>';
-                return;
+                    }).join('');
+                }
             }
 
-            // Initialize catalogData if it doesn't exist
-            state.catalogData = state.catalogData || {};
+            // --- MÓDULO CATÁLOGO WEB ---
+            function renderCatalogModule() {
+                const container = document.getElementById('catalog-kits-list');
+                if (!container) return;
 
-            container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
-                const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
-                const defaultItems = Object.entries(recipe)
-                    .filter(([k]) => k !== 'price')
-                    .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
-                    .join(', ');
-                const safeName = kitName.replace(/\s+/g, '_');
+                const recipes = state.recipes || {};
+                if (Object.keys(recipes).length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #999; padding: 60px;">No hay kits creados. Ve a "Mis Kits" para crear uno.</p>';
+                    return;
+                }
 
-                return `
+                // Initialize catalogData if it doesn't exist
+                state.catalogData = state.catalogData || {};
+
+                container.innerHTML = Object.entries(recipes).map(([kitName, recipe]) => {
+                    const catalogInfo = state.catalogData[kitName] || { image: '', description: '', customItems: [] };
+                    const defaultItems = Object.entries(recipe)
+                        .filter(([k]) => k !== 'price')
+                        .map(([k, v]) => `${v} ${state.inventoryData?.[k]?.name || k}`)
+                        .join(', ');
+                    const safeName = kitName.replace(/\s+/g, '_');
+
+                    return `
                     <div class="tile" style="margin-bottom: 30px;">
                         <h3 style="margin-bottom: 20px; color: var(--highlight);">${kitName}</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -869,98 +989,98 @@
                         </button>
                     </div>
                 `;
-            }).join('');
-        }
-
-        // --- DRAG & DROP HANDLERS ---
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.currentTarget.style.borderColor = '#3b82f6';
-            e.currentTarget.style.backgroundColor = '#eff6ff';
-        }
-
-        function handleDrop(e, safeName) {
-            e.preventDefault();
-            e.stopPropagation();
-            const zone = document.getElementById(`drop-zone-${safeName}`);
-            zone.style.borderColor = '#cbd5e1';
-            zone.style.backgroundColor = '#f8fafc';
-
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                uploadImage(files[0], safeName);
-            }
-        }
-
-        function handleFileSelect(e, safeName) {
-            const files = e.target.files;
-            if (files.length > 0) {
-                uploadImage(files[0], safeName);
-            }
-        }
-
-        function uploadImage(file, safeName) {
-            // Check if Storage is available
-            if (typeof firebase === 'undefined' || !firebase.storage) {
-                alert("Error: Firebase Storage no está habilitado o cargado. Verifica tu conexión.");
-                return;
+                }).join('');
             }
 
-            const storageRef = firebase.storage().ref();
-            const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${file.name}`);
+            // --- DRAG & DROP HANDLERS ---
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.currentTarget.style.borderColor = '#3b82f6';
+                e.currentTarget.style.backgroundColor = '#eff6ff';
+            }
 
-            const uploadTask = fileRef.put(file);
-            const progressBar = document.getElementById(`progress-${safeName}`);
-            const preview = document.getElementById(`preview-${safeName}`);
+            function handleDrop(e, safeName) {
+                e.preventDefault();
+                e.stopPropagation();
+                const zone = document.getElementById(`drop-zone-${safeName}`);
+                zone.style.borderColor = '#cbd5e1';
+                zone.style.backgroundColor = '#f8fafc';
 
-            progressBar.style.display = 'block';
-
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    progressBar.style.width = progress + '%';
-                },
-                (error) => {
-                    console.error("Upload error:", error);
-                    alert("Error al subir la imagen: " + error.message);
-                    progressBar.style.display = 'none';
-                },
-                () => {
-                    // Upload completed successfully
-                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        console.log('File available at', downloadURL);
-                        document.getElementById(`catalog-img-${safeName}`).value = downloadURL;
-                        preview.innerHTML = `<img src="${downloadURL}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-                        progressBar.style.display = 'none';
-                    });
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    uploadImage(files[0], safeName);
                 }
-            );
-        }
-
-        async function saveCatalogKit(kitName) {
-            const safeKitName = kitName.replace(/\s+/g, '_');
-            const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
-            const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
-            const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
-            const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
-
-            state.catalogData = state.catalogData || {};
-            state.catalogData[kitName] = { image, description, customItems };
-
-            try {
-                await saveState();
-                alert(`✅ Cambios guardados para "${kitName}"`);
-            } catch (e) {
-                console.error(e);
-                alert('Error al guardar cambios');
             }
-        }
 
-        function renderSalesHistory() {
-            const tbody = document.querySelector('#sales-history tbody');
-            if (tbody) {
-                tbody.innerHTML = state.sales.slice().reverse().slice(0, 10).map(s => `
+            function handleFileSelect(e, safeName) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    uploadImage(files[0], safeName);
+                }
+            }
+
+            function uploadImage(file, safeName) {
+                // Check if Storage is available
+                if (typeof firebase === 'undefined' || !firebase.storage) {
+                    alert("Error: Firebase Storage no está habilitado o cargado. Verifica tu conexión.");
+                    return;
+                }
+
+                const storageRef = firebase.storage().ref();
+                const fileRef = storageRef.child(`catalog_images/${safeName}_${Date.now()}_${file.name}`);
+
+                const uploadTask = fileRef.put(file);
+                const progressBar = document.getElementById(`progress-${safeName}`);
+                const preview = document.getElementById(`preview-${safeName}`);
+
+                progressBar.style.display = 'block';
+
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        progressBar.style.width = progress + '%';
+                    },
+                    (error) => {
+                        console.error("Upload error:", error);
+                        alert("Error al subir la imagen: " + error.message);
+                        progressBar.style.display = 'none';
+                    },
+                    () => {
+                        // Upload completed successfully
+                        uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                            console.log('File available at', downloadURL);
+                            document.getElementById(`catalog-img-${safeName}`).value = downloadURL;
+                            preview.innerHTML = `<img src="${downloadURL}" style="max-height: 150px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+                            progressBar.style.display = 'none';
+                        });
+                    }
+                );
+            }
+
+            async function saveCatalogKit(kitName) {
+                const safeKitName = kitName.replace(/\s+/g, '_');
+                const image = document.getElementById(`catalog-img-${safeKitName}`).value.trim();
+                const description = document.getElementById(`catalog-desc-${safeKitName}`).value.trim();
+                const itemsText = document.getElementById(`catalog-items-${safeKitName}`).value.trim();
+                const customItems = itemsText ? itemsText.split('\n').filter(line => line.trim()) : [];
+
+                state.catalogData = state.catalogData || {};
+                state.catalogData[kitName] = { image, description, customItems };
+
+                try {
+                    await saveState();
+                    alert(`✅ Cambios guardados para "${kitName}"`);
+                } catch (e) {
+                    console.error(e);
+                    alert('Error al guardar cambios');
+                }
+            }
+
+            function renderSalesHistory() {
+                const tbody = document.querySelector('#sales-history tbody');
+                if (tbody) {
+                    tbody.innerHTML = state.sales.slice().reverse().slice(0, 10).map(s => `
                     <tr>
                         <td>${s.date}</td>
                         <td>${s.type}</td>
@@ -968,156 +1088,274 @@
                         <td>L ${s.profit}</td>
                     </tr>
                 `).join('');
-            }
-        }
-
-        function renderFormOptions() {
-            const sSale = document.getElementById('sale-type');
-            if (sSale) sSale.innerHTML = Object.keys(state.recipes).map(k => `<option value="${k}">${k}</option>`).join('');
-
-            const sPurch = document.getElementById('purchase-item');
-            if (sPurch) sPurch.innerHTML = Object.entries(state.inventoryData).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
-        }
-
-        function adjustStock(id, delta) {
-            state.stock[id] = Math.max(0, (state.stock[id] || 0) + delta);
-            saveState();
-        }
-
-        function toggleNewProductForm() {
-            const el = document.getElementById('new-product-modal');
-            el.style.display = el.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function editProduct(id) {
-            const d = state.inventoryData[id];
-            document.getElementById('edit-prod-id').value = id;
-            document.getElementById('new-prod-name').value = d.name;
-            document.getElementById('new-prod-unit').value = d.unit;
-            document.getElementById('new-prod-qty').value = state.stock[id];
-            toggleNewProductForm();
-        }
-
-        document.getElementById('new-product-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const editId = document.getElementById('edit-prod-id').value;
-            const name = document.getElementById('new-prod-name').value;
-            const unit = document.getElementById('new-prod-unit').value;
-            const qty = parseFloat(document.getElementById('new-prod-qty').value);
-            const cat = document.getElementById('new-prod-category').value;
-
-            const id = editId || name.toLowerCase().replace(/\s+/g, '_');
-
-            state.inventoryData[id] = { name, unit, category: cat };
-            state.stock[id] = qty;
-
-            await saveState();
-            toggleNewProductForm();
-            document.getElementById('new-product-form').reset();
-            document.getElementById('edit-prod-id').value = '';
-        });
-
-        document.getElementById('kit-config-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('kit-name').value;
-            const price = parseFloat(document.getElementById('kit-price').value);
-
-            const recipe = { price };
-            document.querySelectorAll('.kit-ing-input').forEach(input => {
-                const val = parseFloat(input.value);
-                if (val > 0) recipe[input.dataset.id] = val;
-            });
-
-            state.recipes[name] = recipe;
-            await saveState();
-            alert('Kit guardado');
-            e.target.reset();
-        });
-
-        document.getElementById('sales-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const type = document.getElementById('sale-type').value;
-            const price = parseFloat(document.getElementById('sale-price').value);
-            const recipe = state.recipes[type];
-
-            for (let [id, req] of Object.entries(recipe)) {
-                if (id === 'price') continue;
-                if ((state.stock[id] || 0) < req) return alert(`Falta stock de: ${state.inventoryData[id]?.name || id}`);
+                }
             }
 
-            for (let [id, req] of Object.entries(recipe)) {
-                if (id !== 'price') state.stock[id] -= req;
+            function renderFormOptions() {
+                const sSale = document.getElementById('sale-type');
+                if (sSale) sSale.innerHTML = Object.keys(state.recipes).map(k => `<option value="${k}">${k}</option>`).join('');
+
+                const sPurch = document.getElementById('purchase-item');
+                if (sPurch) sPurch.innerHTML = Object.entries(state.inventoryData).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
             }
 
-            const profit = price * 0.5;
-            state.sales.push({
-                date: new Date().toLocaleDateString(),
-                type, price, profit, items: recipe
-            });
-            state.totalProfit += profit;
+            function adjustStock(id, delta) {
+                const oldVal = state.stock[id] || 0;
+                const newVal = Math.max(0, oldVal + delta);
+                state.stock[id] = newVal;
 
-            await saveState();
-            alert('Venta registrada');
-        });
+                // Log History
+                state.stockHistory = state.stockHistory || [];
+                state.stockHistory.push({
+                    timestamp: Date.now(),
+                    date: new Date().toLocaleString(),
+                    material: state.inventoryData[id]?.name || id,
+                    materialId: id,
+                    oldVal: oldVal,
+                    newVal: newVal,
+                    user: 'admin'
+                });
 
-        document.getElementById('purchase-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const item = document.getElementById('purchase-item').value;
-            const qty = parseFloat(document.getElementById('purchase-qty').value);
-            const cost = parseFloat(document.getElementById('purchase-cost').value);
-
-            state.stock[item] = (state.stock[item] || 0) + qty;
-            state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost });
-
-            await saveState();
-            alert('Compra registrada');
-            e.target.reset();
-        });
-
-        function deleteKit(name) {
-            if (confirm('¿Borrar kit?')) {
-                delete state.recipes[name];
                 saveState();
             }
-        }
 
-        function clearSalesHistory() {
-            if (confirm('¿Borrar TODO el historial de ventas?')) {
-                state.sales = [];
-                state.totalProfit = 0;
+            // --- HISTORY & VERSION CONTROL ---
+            function toggleHistoryModal() {
+                const modal = document.getElementById('history-modal');
+                if (modal.style.display === 'none' || !modal.style.display) {
+                    renderHistoryLog();
+                    modal.style.display = 'block';
+                } else {
+                    modal.style.display = 'none';
+                }
+            }
+
+            function renderHistoryLog() {
+                const container = document.getElementById('history-log-list');
+                if (!container) return;
+
+                const history = state.stockHistory || [];
+                if (history.length === 0) {
+                    container.innerHTML = '<p style="color:#999; text-align:center;">No hay cambios registrados.</p>';
+                    return;
+                }
+
+                // Show last 20 changes
+                container.innerHTML = history.slice().reverse().slice(0, 20).map((log, index) => {
+                    // Calculate original index to revert correctly (since we reversed)
+                    const realIndex = history.length - 1 - index;
+
+                    return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee; font-size:13px;">
+                    <div>
+                        <div style="font-weight:bold;">${log.material}</div>
+                        <div style="color:#64748b; font-size:11px;">${log.date}</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="color:#64748b;">${log.oldVal} <i class="fa-solid fa-arrow-right" style="font-size:10px;"></i> <b>${log.newVal}</b></span>
+                        <button onclick="revertChange(${realIndex})" style="background:#fefce8; color:#d97706; border:1px solid #fde68a; padding:4px 8px; border-radius:4px; cursor:pointer;" title="Deshacer cambio"><i class="fa-solid fa-rotate-left"></i></button>
+                    </div>
+                </div>
+                `;
+                }).join('');
+            }
+
+            function revertChange(index) {
+                if (!confirm("¿Seguro que quieres revertir este cambio? Esto restaurará el valor anterior.")) return;
+
+                const log = state.stockHistory[index];
+                if (!log) return;
+
+                // Apply Revert
+                state.stock[log.materialId] = log.oldVal;
+
+                // Log the "Revert" action itself so we have a trail
+                state.stockHistory.push({
+                    timestamp: Date.now(),
+                    date: new Date().toLocaleString(),
+                    material: log.material,
+                    materialId: log.materialId,
+                    oldVal: log.newVal,
+                    newVal: log.oldVal,
+                    user: 'admin (revert)'
+                });
+
                 saveState();
+                renderHistoryLog(); // Refresh list
+                alert("Cambio revertido correctamente.");
             }
-        }
 
-        function switchMode(mode) {
-            document.querySelectorAll('.mode-view').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-            if (mode === 'presentation') {
-                document.getElementById('presentation-mode').classList.add('active');
-            } else {
-                document.getElementById('admin-mode').classList.add('active');
+            function toggleNewProductForm() {
+                const el = document.getElementById('new-product-modal');
+                el.style.display = el.style.display === 'none' ? 'block' : 'none';
             }
-        }
 
-        function showModule(modId) {
-            switchMode('admin');
-            document.querySelectorAll('.admin-module').forEach(el => el.classList.remove('active'));
-            document.getElementById(modId + '-module').classList.add('active');
-
-            const btn = document.getElementById('btn-' + modId);
-            if (btn) btn.classList.add('active');
-        }
-
-        const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebarToggle');
-        if (toggleBtn) {
-            toggleBtn.onclick = () => {
-                if (window.innerWidth <= 768) sidebar.classList.toggle('active');
-                else sidebar.classList.toggle('collapsed');
+            function editProduct(id) {
+                const d = state.inventoryData[id];
+                document.getElementById('edit-prod-id').value = id;
+                document.getElementById('new-prod-name').value = d.name;
+                document.getElementById('new-prod-unit').value = d.unit;
+                document.getElementById('new-prod-qty').value = state.stock[id];
+                toggleNewProductForm();
             }
-        }
-    </script>
+
+            document.getElementById('new-product-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const editId = document.getElementById('edit-prod-id').value;
+                const name = document.getElementById('new-prod-name').value;
+                const unit = document.getElementById('new-prod-unit').value;
+                const qty = parseFloat(document.getElementById('new-prod-qty').value);
+                const cat = document.getElementById('new-prod-category').value;
+
+                const id = editId || name.toLowerCase().replace(/\s+/g, '_');
+
+                state.inventoryData[id] = { name, unit, category: cat };
+                state.stock[id] = qty;
+
+                await saveState();
+                toggleNewProductForm();
+                document.getElementById('new-product-form').reset();
+                document.getElementById('edit-prod-id').value = '';
+            });
+
+            document.getElementById('kit-config-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('kit-name').value;
+                const price = parseFloat(document.getElementById('kit-price').value);
+
+                const recipe = { price };
+                document.querySelectorAll('.kit-ing-input').forEach(input => {
+                    const val = parseFloat(input.value);
+                    if (val > 0) recipe[input.dataset.id] = val;
+                });
+
+                state.recipes[name] = recipe;
+                await saveState();
+                alert('Kit guardado');
+                e.target.reset();
+            });
+
+            document.getElementById('sales-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const type = document.getElementById('sale-type').value;
+                const price = parseFloat(document.getElementById('sale-price').value);
+                const recipe = state.recipes[type];
+
+                for (let [id, req] of Object.entries(recipe)) {
+                    if (id === 'price') continue;
+                    if ((state.stock[id] || 0) < req) return alert(`Falta stock de: ${state.inventoryData[id]?.name || id}`);
+                }
+
+                for (let [id, req] of Object.entries(recipe)) {
+                    if (id !== 'price') state.stock[id] -= req;
+                }
+
+                const profit = price * 0.5;
+                state.sales.push({
+                    date: new Date().toLocaleDateString(),
+                    type, price, profit, items: recipe
+                });
+                state.totalProfit += profit;
+
+                await saveState();
+                alert('Venta registrada');
+            });
+
+            document.getElementById('purchase-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const item = document.getElementById('purchase-item').value;
+                const qty = parseFloat(document.getElementById('purchase-qty').value);
+                const cost = parseFloat(document.getElementById('purchase-cost').value);
+
+                state.stock[item] = (state.stock[item] || 0) + qty;
+                state.purchases.push({ date: new Date().toLocaleDateString(), item, qty, cost });
+
+                await saveState();
+                alert('Compra registrada');
+                e.target.reset();
+            });
+
+            function deleteKit(name) {
+                if (confirm('¿Borrar kit?')) {
+                    delete state.recipes[name];
+                    saveState();
+                }
+            }
+
+            function clearSalesHistory() {
+                if (confirm('¿Borrar TODO el historial de ventas?')) {
+                    state.sales = [];
+                    state.totalProfit = 0;
+                    saveState();
+                }
+            }
+
+            // --- ADMIN SEARCH ---
+            function filterAdminList(moduleName, term) {
+                term = term.toLowerCase();
+
+                if (moduleName === 'inventory') {
+                    const cards = document.querySelectorAll('#inventory-container .inventory-card');
+                    cards.forEach(card => {
+                        const title = card.querySelector('.card-title')?.innerText.toLowerCase() || '';
+                        if (title.includes(term)) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                } else if (moduleName === 'kits') {
+                    const rows = document.querySelectorAll('#kit-catalog-list > div');
+                    rows.forEach(row => {
+                        const text = row.innerText.toLowerCase();
+                        if (text.includes(term)) {
+                            row.style.display = 'flex';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                } else if (moduleName === 'catalog') {
+                    const items = document.querySelectorAll('#catalog-kits-list .tile');
+                    items.forEach(item => {
+                        const text = item.innerText.toLowerCase();
+                        if (text.includes(term)) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                }
+            }
+
+            function switchMode(mode) {
+                document.querySelectorAll('.mode-view').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+                if (mode === 'presentation') {
+                    document.getElementById('presentation-mode').classList.add('active');
+                } else {
+                    document.getElementById('admin-mode').classList.add('active');
+                }
+            }
+
+            function showModule(modId) {
+                switchMode('admin');
+                document.querySelectorAll('.admin-module').forEach(el => el.classList.remove('active'));
+                document.getElementById(modId + '-module').classList.add('active');
+
+                const btn = document.getElementById('btn-' + modId);
+                if (btn) btn.classList.add('active');
+            }
+
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            if (toggleBtn) {
+                toggleBtn.onclick = () => {
+                    if (window.innerWidth <= 768) sidebar.classList.toggle('active');
+                    else sidebar.classList.toggle('collapsed');
+                }
+            }
+        </script>
 </body>
 
 </html>
