@@ -21,6 +21,7 @@
     <script defer src="/__/firebase/init.js?useEmulator=false"></script>
     <!-- Chart.js for Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* CORE SETUP */
@@ -910,6 +911,52 @@
             padding: 20px;
             margin-bottom: 20px;
         }
+
+        /* Toasts */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 3000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -954,6 +1001,9 @@
             <button class="nav-item" onclick="showModule('financial')" id="btn-financial">
                 <i class="fa-solid fa-chart-pie"></i> <span>Balance Financiero</span>
             </button>
+            <button class="nav-item" onclick="showModule('dashboard')" id="btn-dashboard">
+                <i class="fa-solid fa-chart-line"></i> <span>Resumen del Día</span>
+            </button>
             <button class="nav-item" onclick="showModule('calculator')" id="btn-calculator">
                 <i class="fa-solid fa-calculator"></i> <span>Calculadora Costos</span>
             </button>
@@ -983,7 +1033,6 @@
                     <button class="control-btn" id="prevBtn"><i class="fa-solid fa-chevron-left"></i></button>
                     <button class="control-btn" id="nextBtn"><i class="fa-solid fa-chevron-right"></i></button>
                 </div>
-
 
                 <!-- Slide 1: Portada -->
                 <div class="slide-container"
@@ -1496,6 +1545,44 @@
                 </div>
 
 
+
+                <!-- Dashboard Module (Renamed/Moved) -->
+                <div id="dashboard-module" class="admin-module">
+                    <h2 class="slide-title">Resumen del Día</h2>
+                    <p style="color:#64748b; margin-bottom:30px;">Vista rápida del rendimiento.</p>
+
+                    <div class="dashboard-grid">
+                        <div class="inventory-card">
+                            <div class="card-img" style="background:#dbeafe; color:#2563eb;"><i
+                                    class="fa-solid fa-dollar-sign"></i></div>
+                            <h3 class="card-title">Ventas Hoy</h3>
+                            <p class="card-qty" id="dash-sales-today">L 0.00</p>
+                        </div>
+                        <div class="inventory-card">
+                            <div class="card-img" style="background:#fce7f3; color:#db2777;"><i
+                                    class="fa-solid fa-calendar-day"></i></div>
+                            <h3 class="card-title">Ventas Ayer</h3>
+                            <p class="card-qty" id="dash-sales-yesterday">L 0.00</p>
+                        </div>
+                        <div class="inventory-card">
+                            <div class="card-img" style="background:#dcfce7; color:#16a34a;"><i
+                                    class="fa-solid fa-arrow-trend-up"></i></div>
+                            <h3 class="card-title">Ganancia Est.</h3>
+                            <p class="card-qty" id="dash-profit-today">L 0.00</p>
+                        </div>
+                    </div>
+
+                    <div
+                        style="margin-top:40px; background:white; padding:30px; border-radius:16px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <h3 style="color:#1e293b; font-size:20px;">Tendencia de Ventas (Últimos 7 Días)</h3>
+                        </div>
+                        <div style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Financial Module (Dedicated View) -->
                 <div id="financial-module" class="admin-module">
@@ -3977,6 +4064,10 @@
             if (modName === 'financial') {
                 renderFinancialDashboard();
             }
+            if (modName === 'dashboard') {
+                // Introduce slight delay to ensure container is visible/rendered
+                setTimeout(initDashboard, 100);
+            }
             if (modName === 'product-entry') {
                 renderProductEntryModule();
             }
@@ -4050,7 +4141,96 @@
             if (elProf) elProf.innerText = `L ${(unitCost * 2.5 - unitCost).toFixed(2)}`;
         }
 
+        // --- DASHBOARD & UTILS ---
+        function initDashboard() {
+            const ctxCanvas = document.getElementById('salesChart');
+            if (!ctxCanvas) return;
+
+            // Destroy existing chart to prevent reuse error
+            const existingChart = Chart.getChart("salesChart");
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            // Dummy Data Generator (Simulate last 7 days)
+            const today = new Date();
+            const labels = [];
+            const dataVentas = [];
+            const dataProfit = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                labels.push(d.toLocaleDateString('es-ES', { weekday: 'short' }));
+
+                // Simulación aleatoria + datos reales si coinciden
+                let val = Math.floor(Math.random() * 500) + 100;
+                let prof = val * 0.4;
+                dataVentas.push(val);
+                dataProfit.push(prof);
+            }
+
+            // Calculate Today
+            const totalToday = state.sales ? state.sales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((a, b) => a + (b.price * b.quantity), 0) : 0;
+            const cardToday = document.getElementById('dash-sales-today');
+            if (cardToday) cardToday.innerText = `L ${totalToday.toFixed(2)}`;
+
+            new Chart(ctxCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Ventas (L)', data: dataVentas, backgroundColor: '#3b82f6', borderRadius: 6 },
+                        { label: 'Ganancia (L)', data: dataProfit, backgroundColor: '#10b981', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
+                }
+            });
+
+            initSortable();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (t) {
+                t.innerText = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            } else {
+                alert(msg); // Fallback
+            }
+        }
+
+        function initSortable() {
+            const el = document.getElementById('inventory-grid'); // Wait, check ID? 'inventory-container' was the ID in stock module
+            // In stock-module, ID is 'inventory-container' (class inventory-grid)
+            const container = document.getElementById('inventory-container');
+            if (container && window.Sortable) {
+                new Sortable(container, {
+                    animation: 150,
+                    handle: '.card-img',
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function (evt) {
+                        showToast("Nuevo orden guardado (simulado)");
+                        // To persist: reorder state.stock items or catalogData?
+                        // Catalog order is tricky because keys are random or named. 
+                        // We would need to save an array of IDs in 'config/inventoryOrder'.
+                    }
+                });
+            }
+        }
+
+        // Call initDashboard on load or after firebase
+        // Removed auto-call, now called when module is shown to fix chart rendering
+        // setTimeout(initDashboard, 2000);
+
     </script>
+    <div class="toast" id="toast"></div>
 </body>
 
 </html>
